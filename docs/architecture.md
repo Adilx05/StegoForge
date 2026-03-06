@@ -57,6 +57,34 @@ Dependencies should flow inward:
 4. Envelope verification and payload reconstruction.
 5. Result includes payload stream/file and metadata.
 
+## Finalized core contracts
+
+### Shared option/value blocks
+
+| Type | Fields | Behavioral guarantees |
+| --- | --- | --- |
+| `ProcessingOptions` | `CompressionMode`, `CompressionLevel`, `EncryptionMode`, `OverwriteBehavior`, `VerbosityMode` | Defaults are stable (`Automatic`, level `5`, `Optional`, `Disallow`, `Normal`). Compression level is validated to `0-9`. |
+| `PasswordOptions` | `Requirement`, `SourceHint`, `SourceReference` | Never stores a secret. Models requirement semantics and an optional secure-source hint/reference only. Whitespace source references are rejected. |
+| `OperationDiagnostics` | `Warnings`, `Notes`, `Duration`, `AlgorithmIdentifier`, `ProviderIdentifier` | `Duration` cannot be negative. `Empty` provides a stable zero-value diagnostics object. |
+
+### Request contracts
+
+| Request | Fields | Behavioral guarantees |
+| --- | --- | --- |
+| `EmbedRequest` | `CarrierPath`, `OutputPath`, `Payload`, `ProcessingOptions`, `PasswordOptions` | Required paths and non-empty payload are enforced. Option blocks default to shared defaults when omitted. |
+| `ExtractRequest` | `CarrierPath`, `OutputPath`, `ProcessingOptions`, `PasswordOptions` | Required paths are enforced. Option blocks default to shared defaults when omitted. |
+| `CapacityRequest` | `CarrierPath`, `PayloadSizeBytes`, `ProcessingOptions` | Required carrier path and non-negative payload size are enforced. Processing options default when omitted. |
+| `InfoRequest` | `CarrierPath`, `ProcessingOptions` | Required carrier path is enforced. Processing options default when omitted. |
+
+### Response contracts
+
+| Response | Fields | Behavioral guarantees |
+| --- | --- | --- |
+| `EmbedResponse` | `OutputPath`, `CarrierFormatId`, `PayloadSizeBytes`, `BytesEmbedded`, `Diagnostics` | Stable machine-readable format identifier and payload/embedded byte counts. Diagnostics always present. |
+| `ExtractResponse` | `OutputPath`, `CarrierFormatId`, `Payload`, `PayloadSizeBytes`, `WasCompressed`, `WasEncrypted`, `Diagnostics` | Payload length is reflected into `PayloadSizeBytes`. Diagnostics always present. |
+| `CapacityResponse` | `CarrierFormatId`, `RequestedPayloadSizeBytes`, `AvailableCapacityBytes`, `CanEmbed`, `RemainingBytes`, `Diagnostics` | Stable machine-readable capacity fields and decision boolean. Diagnostics always present. |
+| `CarrierInfoResponse` | `FormatId`, `CarrierSizeBytes`, `AvailableCapacityBytes`, `SupportsEncryption`, `SupportsCompression`, `Diagnostics` | Stable machine-readable format/capacity flags. Diagnostics always present. |
+
 ## Error model
 
 Errors should be expressed via `StegoErrorCode` + message + optional context so CLI/WPF can provide consistent user-facing diagnostics and machine-readable failures.
