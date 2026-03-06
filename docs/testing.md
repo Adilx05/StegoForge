@@ -31,6 +31,26 @@
  dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
 ```
 
+## Payload Envelope v1
+
+Acceptance criteria traceability for `PayloadEnvelopeSerializerTests`:
+
+- **Envelope serializer/deserializer supports magic, version, flags, header, payload.**
+  - `SerializeDeserialize_RoundTrip_PreservesAllEnvelopeFields`
+  - `Deserialize_KnownFixtureEnvelope_ProducesExpectedValues`
+- **Truncation/corruption handling returns deterministic errors.**
+  - `Deserialize_TruncationAtStructuralBoundaries_ThrowsInvalidPayload`
+  - `Deserialize_CorruptMagic_ThrowsInvalidHeader`
+  - `Deserialize_CorruptVersion_ThrowsInvalidHeader`
+  - `Deserialize_CorruptHeaderLengthPrefix_ThrowsInvalidPayload`
+  - `Deserialize_CorruptPayloadLengthPrefix_ThrowsInvalidPayload`
+  - `Deserialize_CorruptIntegrityLengthPrefix_ThrowsInvalidPayload`
+  - `Deserialize_ReservedUnknownFlagBits_AreRejectedByV1Policy`
+  - `Serialize_ReservedUnknownFlagBits_AreRejectedByV1Policy`
+- **Round-trip tests validate binary compatibility expectations.**
+  - `Serialize_KnownFixtureEnvelope_ProducesExpectedGoldenBytes`
+  - `Deserialize_KnownFixtureEnvelope_ProducesExpectedValues`
+
 ## Test categories to prioritize
 
 1. **Payload framing correctness**

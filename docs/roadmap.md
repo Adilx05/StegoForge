@@ -26,11 +26,11 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Implement versioned payload framing with metadata and integrity primitives.
 
-**Acceptance criteria:**
+**Implementation status (tracked):**
 
-- Envelope serializer/deserializer supports magic, version, flags, header, payload.
-- Truncation/corruption handling returns deterministic errors.
-- Round-trip tests validate binary compatibility expectations.
+- [x] Envelope serializer/deserializer supports magic, version, flags, header, payload via `PayloadEnvelopeSerializer` in `src/StegoForge.Application/Payload/PayloadEnvelopeSerializer.cs`, validated by `SerializeDeserialize_RoundTrip_PreservesAllEnvelopeFields` and `Deserialize_KnownFixtureEnvelope_ProducesExpectedValues` in `tests/StegoForge.Tests.Unit/PayloadEnvelopeSerializerTests.cs`.
+- [x] Truncation/corruption handling returns deterministic typed errors (`InvalidHeaderException`/`InvalidPayloadException`) validated by `Deserialize_TruncationAtStructuralBoundaries_ThrowsInvalidPayload`, `Deserialize_CorruptMagic_ThrowsInvalidHeader`, `Deserialize_CorruptVersion_ThrowsInvalidHeader`, `Deserialize_CorruptHeaderLengthPrefix_ThrowsInvalidPayload`, `Deserialize_CorruptPayloadLengthPrefix_ThrowsInvalidPayload`, and `Deserialize_CorruptIntegrityLengthPrefix_ThrowsInvalidPayload` in `tests/StegoForge.Tests.Unit/PayloadEnvelopeSerializerTests.cs`.
+- [x] Binary compatibility checks are enforced by fixture/golden tests `Serialize_KnownFixtureEnvelope_ProducesExpectedGoldenBytes` and `Deserialize_KnownFixtureEnvelope_ProducesExpectedValues` in `tests/StegoForge.Tests.Unit/PayloadEnvelopeSerializerTests.cs`.
 
 ## Milestone 4 — Compression provider integration
 
