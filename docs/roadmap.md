@@ -46,11 +46,20 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Add authenticated encryption and key derivation support.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- AEAD-based encryption path implemented.
-- Password/key derivation is configurable through request options.
-- Wrong key and tamper scenarios fail with clear, test-covered errors.
+- [ ] AEAD provider implementation exists in `src/StegoForge.Crypto/Aead/AesGcmCryptoProvider.cs` and is wired through `ICryptoProvider` resolution in `src/StegoForge.Application/Payload/PayloadOrchestrationService.cs`.
+- [ ] KDF policy/options binding exists in `src/StegoForge.Core/Models/PasswordOptions.cs` and request mapping in `src/StegoForge.Cli/Commands/EmbedCommand.cs` + `src/StegoForge.Cli/Commands/ExtractCommand.cs`.
+- [ ] Envelope crypto metadata (`CipherAlgorithmId`, `KdfAlgorithmId`, salt/nonce/tag fields) is serialized/deserialized in `src/StegoForge.Application/Payload/PayloadEnvelopeSerializer.cs`.
+- [ ] Wrong-password integration tests pass:
+  - `ExtractPayload_EncryptedEnvelope_WithWrongPassword_ThrowsWrongPasswordException`
+  - `ExtractPayload_EncryptedEnvelope_WithWrongPassword_MapsToStegoErrorCodeWrongPassword`
+  - `CliExtract_WithWrongPassword_ReturnsExitCode8`
+- [ ] Tamper-detection tests pass:
+  - `ExtractPayload_EncryptedEnvelope_WithTamperedCiphertext_ThrowsWrongPasswordException`
+  - `ExtractPayload_EncryptedEnvelope_WithTamperedAuthTag_ThrowsWrongPasswordException`
+  - `ExtractPayload_EncryptedEnvelope_WithTamperedCipherAlgorithmId_ThrowsInvalidHeaderException`
+  - `CliExtract_WithTamperedCiphertext_ReturnsExitCode8`
 
 ## Milestone 6 — PNG format handler (v1)
 

@@ -29,8 +29,20 @@ Header serialization is deterministic and length-prefixed per field by the seria
 | `CreatedUtc` | Int64 | Unix epoch milliseconds. |
 | `CompressionDescriptor` | UTF-8 string | `none`, `deflate`, `brotli`, etc. |
 | `EncryptionDescriptor` | UTF-8 string | `none`, `aes-gcm-256`, etc. |
-| `SaltMetadata` | UTF-8 string (optional) | Encoded salt metadata when encryption/KDF uses one. |
-| `NonceMetadata` | UTF-8 string (optional) | Encoded nonce/IV metadata when required. |
+| `KdfAlgorithmId` | UTF-8 string (optional) | KDF identifier when encryption is enabled (for example `pbkdf2-sha256`). Must be `none`/empty when encryption is disabled. |
+| `KdfParameterMetadata` | UTF-8 string (optional) | Deterministic parameter string for KDF settings (for example iteration count or memory/cpu profile). Must be parseable without secret material. |
+| `CipherAlgorithmId` | UTF-8 string | AEAD algorithm identifier (for example `aes-256-gcm`, `chacha20-poly1305`) or `none` when not encrypted. |
+| `SaltMetadata` | UTF-8 string (optional) | Encoded KDF salt metadata. For v1, value is base64url-encoded raw salt bytes when present. |
+| `NonceMetadata` | UTF-8 string (optional) | Encoded AEAD nonce/IV metadata. For v1, value is base64url-encoded raw nonce bytes when present. |
+| `TagLengthBytes` | UInt16 | Authentication tag size in bytes. Must be `0` when encryption is disabled; otherwise must match `IntegrityLength`. |
+
+### Crypto metadata handling rules (v1)
+
+- `CipherAlgorithmId` is the canonical selector for crypto provider resolution during extract.
+- `KdfAlgorithmId` + `KdfParameterMetadata` + `SaltMetadata` together define key-derivation expectations; no secret password bytes are ever serialized.
+- `NonceMetadata` must be unique per encryption operation for a given derived key.
+- AEAD authentication tag bytes are serialized in `IntegrityData`; the header carries only algorithm and sizing metadata (`TagLengthBytes`).
+- Header metadata values must be ASCII/UTF-8 normalized to lowercase identifiers for deterministic comparisons.
 
 ## Flags (v1 bit layout)
 
@@ -79,6 +91,12 @@ This rule set ensures the wire format remains machine-readable while preserving 
 - Magic identifies StegoForge payloads.
 - Version increments for incompatible wire changes.
 - Unknown version values must return an unsupported-version error.
+- New header fields may be added only via a new header schema/version marker; v1 parsers must reject unknown schema variants rather than attempting partial decode.
+- Algorithm IDs are versioned independently from envelope version; unsupported algorithm IDs in a supported envelope version must fail as `UnsupportedFormat`, not unsupported envelope version.
+- Backward-compatible parser behavior for v1 requires strict validation of crypto metadata combinations:
+  - encrypted flag set + missing/`none` cipher id => invalid header
+  - encrypted flag clear + non-empty cipher/KDF/salt/nonce/tag metadata => invalid header
+  - `TagLengthBytes` mismatch with `IntegrityLength` => invalid payload/header contract violation
 - Reserved flag bits are preserved for future expansion.
 
 ## Binary compatibility contract

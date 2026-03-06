@@ -44,18 +44,33 @@ Dependencies should flow inward:
 
 1. Entry point parses options and validates base arguments.
 2. Application service selects carrier handler by format signature/extension.
-3. Payload envelope is built (metadata + payload + integrity tag).
-4. Optional compression, then optional encryption.
-5. Handler maps bits/bytes into carrier medium.
-6. Result reports output path, capacity used, and diagnostics.
+3. Application resolves compression provider (if requested) and runs compression first.
+4. Application resolves crypto provider + KDF settings and encrypts the (possibly compressed) payload.
+5. Payload envelope is built from finalized bytes and descriptors (metadata + payload + AEAD tag/integrity data).
+6. Handler maps bits/bytes into carrier medium.
+7. Result reports output path, capacity used, and diagnostics.
 
 ### Extract
 
 1. Entry point identifies carrier and extraction parameters.
 2. Handler retrieves encoded envelope bytes.
-3. Optional decryption, then optional decompression.
-4. Envelope verification and payload reconstruction.
-5. Result includes payload stream/file and metadata.
+3. Envelope parser validates framing/header fields and surfaces crypto/compression descriptors.
+4. If encrypted, application resolves crypto provider from header metadata and performs authenticated decryption before any decompression.
+5. If compressed, application resolves compression provider from header metadata and decompresses the decrypted bytes.
+6. Envelope verification and payload reconstruction.
+7. Result includes payload stream/file and metadata.
+
+## Finalized processing order and provider boundaries
+
+Milestone 5 locks the pipeline boundary between compression and encryption:
+
+- **Embed order is fixed:** `payload -> compression (optional) -> encryption (optional) -> envelope serialize -> carrier embed`.
+- **Extract order is fixed inverse:** `carrier extract -> envelope parse -> decryption (optional) -> decompression (optional) -> payload output`.
+- Compression providers only receive plaintext payload bytes and never handle password/KDF material.
+- Crypto providers receive only post-compression payload bytes plus authenticated-header context and return ciphertext + auth tag metadata.
+- Application orchestration (`StegoForge.Application`) is the only layer that coordinates both provider types; carrier handlers must stay crypto/compression agnostic and treat envelope bytes as opaque.
+
+This separation keeps compression behavior deterministic, avoids leaking plaintext metadata into carrier handlers, and ensures authenticated decryption occurs before any decompression is attempted.
 
 
 ## Provider selection strategy and fallback behavior

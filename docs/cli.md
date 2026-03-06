@@ -9,13 +9,31 @@ The CLI app (`src/StegoForge.Cli`) provides scriptable steganography workflows.
 - `capacity` — estimate available payload size for a given carrier.
 - `info` — inspect carrier and embedded metadata (when available).
 
-## Planned option themes
+## Encryption and KDF option surface (Milestone 5)
 
-- Input/output file paths.
-- Encryption options (password/key, algorithm).
-- Compression options.
-- Output format (human-readable vs structured).
-- Overwrite/force and safety confirmations.
+### Common embed options
+
+| Option | Description |
+| --- | --- |
+| `--encrypt <required|optional|off>` | Controls encryption policy. `required` fails if crypto settings are incomplete; `optional` uses defaults when password source is available; `off` disables encryption metadata/processing. |
+| `--cipher <id>` | AEAD algorithm id (for example `aes-256-gcm`). |
+| `--kdf <id>` | KDF algorithm id (for example `pbkdf2-sha256`, `argon2id`). |
+| `--kdf-iterations <n>` | PBKDF2-style iteration count (when selected KDF supports it). |
+| `--kdf-memory-kib <n>` | Argon2-style memory cost (KiB), KDF-specific. |
+| `--kdf-parallelism <n>` | Argon2-style parallelism lanes, KDF-specific. |
+| `--salt-length <bytes>` | Requested generated salt length in bytes. |
+| `--nonce-length <bytes>` | Requested generated AEAD nonce length in bytes (if algorithm permits configurable length). |
+
+### Password source options
+
+| Option | Description | Guidance |
+| --- | --- | --- |
+| `--password-prompt` | Read password from secure interactive prompt. | Preferred for manual use; avoids shell history leakage. |
+| `--password-env <VAR_NAME>` | Read password from environment variable. | Use only in controlled CI/runtime environments and clear variable after use. |
+| `--password-file <path>` | Read password bytes from file. | Restrict file permissions (`0600` equivalent) and avoid syncing this file. |
+| `--password-stdin` | Read password from stdin pipe. | Preferred for automation with secret managers (`printf ... | stegoforge ...`). |
+
+Do **not** pass raw secrets directly on the command line (for example `--password "..."`) because command-line arguments are often visible in process listings and shell history.
 
 ## CLI design principles
 
@@ -46,8 +64,17 @@ Exit code `0` remains reserved for success.
 ## Example target invocations (planned)
 
 ```bash
-stegoforge embed --carrier in.png --payload secret.bin --out out.png --encrypt --password "..."
-stegoforge extract --carrier out.png --out recovered.bin --password "..."
+stegoforge embed --carrier in.png --payload secret.bin --out out.png \
+  --encrypt required --cipher aes-256-gcm --kdf pbkdf2-sha256 --kdf-iterations 600000 \
+  --password-prompt
+
+stegoforge embed --carrier in.png --payload secret.bin --out out.png \
+  --encrypt required --cipher aes-256-gcm --kdf argon2id --kdf-memory-kib 65536 --kdf-parallelism 2 \
+  --password-env STEGOFORGE_PASSWORD
+
+printf '%s' "$STEGOFORGE_PASSWORD" | stegoforge extract --carrier out.png --out recovered.bin \
+  --password-stdin
+
 stegoforge capacity --carrier in.png
 stegoforge info --carrier out.png
 ```
