@@ -148,7 +148,7 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         return Math.Max(0L, totalBytes - PayloadLengthPrefixBytes);
     }
 
-    private static void EmbedBits(Image<Rgba32> image, ReadOnlySpan<byte> payload, CancellationToken cancellationToken)
+    private static void EmbedBits(Image<Rgba32> image, byte[] payload, CancellationToken cancellationToken)
     {
         var bitIndex = 0;
         var totalBits = payload.Length * 8;
@@ -184,7 +184,7 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         }
     }
 
-    private static byte EmbedBit(byte channel, ReadOnlySpan<byte> payload, int bitIndex)
+    private static byte EmbedBit(byte channel, byte[] payload, int bitIndex)
     {
         var sourceByte = payload[bitIndex / 8];
         var sourceBit = (sourceByte >> (7 - (bitIndex % 8))) & 1;
