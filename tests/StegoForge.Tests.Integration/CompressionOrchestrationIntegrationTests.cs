@@ -68,7 +68,7 @@ public sealed class CompressionOrchestrationIntegrationTests
         var options = new ProcessingOptions(compressionMode: CompressionMode.Enabled, compressionLevel: 9);
         var validEnvelope = _service.CreateEnvelopeForEmbed(source, options);
 
-        var corruptedPayload = [.. validEnvelope.Payload];
+        var corruptedPayload = validEnvelope.Payload.ToArray();
         corruptedPayload[0] ^= 0xFF;
         corruptedPayload[^1] ^= 0x7A;
 
