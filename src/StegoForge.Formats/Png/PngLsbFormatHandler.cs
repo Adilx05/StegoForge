@@ -3,6 +3,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
@@ -152,27 +153,30 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         var bitIndex = 0;
         var totalBits = payload.Length * 8;
 
-        for (var y = 0; y < image.Height && bitIndex < totalBits; y++)
+        image.ProcessPixelRows(accessor =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var row = image.Frames.RootFrame.GetPixelRowSpan(y);
-            for (var x = 0; x < row.Length && bitIndex < totalBits; x++)
+            for (var y = 0; y < accessor.Height && bitIndex < totalBits; y++)
             {
-                var pixel = row[x];
-                pixel.R = EmbedBit(pixel.R, payload, bitIndex++);
-                if (bitIndex < totalBits)
+                cancellationToken.ThrowIfCancellationRequested();
+                var row = accessor.GetRowSpan(y);
+                for (var x = 0; x < row.Length && bitIndex < totalBits; x++)
                 {
-                    pixel.G = EmbedBit(pixel.G, payload, bitIndex++);
-                }
+                    var pixel = row[x];
+                    pixel.R = EmbedBit(pixel.R, payload, bitIndex++);
+                    if (bitIndex < totalBits)
+                    {
+                        pixel.G = EmbedBit(pixel.G, payload, bitIndex++);
+                    }
 
-                if (bitIndex < totalBits)
-                {
-                    pixel.B = EmbedBit(pixel.B, payload, bitIndex++);
-                }
+                    if (bitIndex < totalBits)
+                    {
+                        pixel.B = EmbedBit(pixel.B, payload, bitIndex++);
+                    }
 
-                row[x] = pixel;
+                    row[x] = pixel;
+                }
             }
-        }
+        });
 
         if (bitIndex < totalBits)
         {
@@ -211,18 +215,25 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
 
     private static IEnumerable<byte> EnumerateCarrierBits(Image<Rgba32> image, CancellationToken cancellationToken)
     {
-        for (var y = 0; y < image.Height; y++)
+        var bits = new List<byte>(checked(image.Width * image.Height * 3));
+
+        image.ProcessPixelRows(accessor =>
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var row = image.Frames.RootFrame.GetPixelRowSpan(y);
-            for (var x = 0; x < row.Length; x++)
+            for (var y = 0; y < accessor.Height; y++)
             {
-                var pixel = row[x];
-                yield return (byte)(pixel.R & 1);
-                yield return (byte)(pixel.G & 1);
-                yield return (byte)(pixel.B & 1);
+                cancellationToken.ThrowIfCancellationRequested();
+                var row = accessor.GetRowSpan(y);
+                for (var x = 0; x < row.Length; x++)
+                {
+                    var pixel = row[x];
+                    bits.Add((byte)(pixel.R & 1));
+                    bits.Add((byte)(pixel.G & 1));
+                    bits.Add((byte)(pixel.B & 1));
+                }
             }
-        }
+        });
+
+        return bits;
     }
 
     private static PngCarrierInfo GetRequiredSupportedPngInfo(Stream stream)

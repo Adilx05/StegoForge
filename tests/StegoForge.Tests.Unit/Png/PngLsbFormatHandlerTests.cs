@@ -1,6 +1,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using StegoForge.Core.Errors;
 using StegoForge.Formats.Png;
 
@@ -74,16 +75,19 @@ public sealed class PngLsbFormatHandlerTests
     private static async Task<MemoryStream> CreatePngAsync(int width, int height, bool withAlpha)
     {
         using Image<Rgba32> image = new(width, height);
-        for (var y = 0; y < height; y++)
+        image.ProcessPixelRows(accessor =>
         {
-            var row = image.Frames.RootFrame.GetPixelRowSpan(y);
-            for (var x = 0; x < width; x++)
+            for (var y = 0; y < accessor.Height; y++)
             {
-                row[x] = withAlpha
-                    ? new Rgba32((byte)(x * 5), (byte)(y * 3), (byte)(x + y), 128)
-                    : new Rgba32((byte)(x * 5), (byte)(y * 3), (byte)(x + y), 255);
+                var row = accessor.GetRowSpan(y);
+                for (var x = 0; x < row.Length; x++)
+                {
+                    row[x] = withAlpha
+                        ? new Rgba32((byte)(x * 5), (byte)(y * 3), (byte)(x + y), 128)
+                        : new Rgba32((byte)(x * 5), (byte)(y * 3), (byte)(x + y), 255);
+                }
             }
-        }
+        });
 
         var stream = new MemoryStream();
         var encoder = new PngEncoder
@@ -100,14 +104,17 @@ public sealed class PngLsbFormatHandlerTests
     private static async Task<MemoryStream> CreateGrayscalePngAsync()
     {
         using Image<L8> image = new(8, 8);
-        for (var y = 0; y < image.Height; y++)
+        image.ProcessPixelRows(accessor =>
         {
-            var row = image.Frames.RootFrame.GetPixelRowSpan(y);
-            for (var x = 0; x < row.Length; x++)
+            for (var y = 0; y < accessor.Height; y++)
             {
-                row[x] = new L8((byte)(x + y));
+                var row = accessor.GetRowSpan(y);
+                for (var x = 0; x < row.Length; x++)
+                {
+                    row[x] = new L8((byte)(x + y));
+                }
             }
-        }
+        });
 
         var stream = new MemoryStream();
         await image.SaveAsPngAsync(stream, new PngEncoder
