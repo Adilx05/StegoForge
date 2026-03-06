@@ -65,6 +65,15 @@ Header serialization is deterministic and length-prefixed per field by the seria
 - Unknown version values must return an unsupported-version error.
 - Reserved flag bits are preserved for future expansion.
 
+## Binary compatibility contract
+
+The v1 envelope wire format is protected by fixture/golden tests in `PayloadEnvelopeSerializerTests`:
+
+- `Serialize_KnownFixtureEnvelope_ProducesExpectedGoldenBytes` locks serializer output to a canonical byte sequence.
+- `Deserialize_KnownFixtureEnvelope_ProducesExpectedValues` ensures parser compatibility with the same canonical bytes.
+
+When refactoring serializer/parser internals, these tests act as a compatibility contract and must continue passing unless a deliberate versioned wire-format change is introduced.
+
 ## Security notes
 
 - Prefer authenticated encryption (AEAD) rather than encrypt-then-raw-checksum.

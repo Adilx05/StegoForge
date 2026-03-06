@@ -25,6 +25,16 @@
  dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj
 ```
 
+## Contributor shortcut: envelope-focused tests
+
+When working on payload envelope framing, you can run only the envelope-related unit tests:
+
+```bash
+ dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --filter PayloadEnvelope
+```
+
+This filter matches `PayloadEnvelopeSerializerTests`/`PayloadEnvelopeContractsTests` and gives fast feedback before broader suite runs.
+
 ## WPF-only build/test
 
 > Recommended on Windows with desktop workloads installed.
