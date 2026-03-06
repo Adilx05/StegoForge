@@ -2,10 +2,13 @@ namespace StegoForge.Core.Errors;
 
 public enum StegoErrorCode
 {
+    FileNotFound,
+    InvalidArguments,
+    CorruptedData,
     UnsupportedFormat,
-    WrongPassword,
     InvalidPayload,
     InvalidHeader,
+    WrongPassword,
     InsufficientCapacity,
     OutputAlreadyExists,
     InternalProcessingFailure

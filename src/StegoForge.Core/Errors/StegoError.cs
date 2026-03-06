@@ -2,6 +2,12 @@ namespace StegoForge.Core.Errors;
 
 public sealed record StegoError(StegoErrorCode Code, string Message)
 {
+    public static StegoError FileNotFound(string message) => new(StegoErrorCode.FileNotFound, message);
+
+    public static StegoError InvalidArguments(string message) => new(StegoErrorCode.InvalidArguments, message);
+
+    public static StegoError CorruptedData(string message) => new(StegoErrorCode.CorruptedData, message);
+
     public static StegoError UnsupportedFormat(string message) => new(StegoErrorCode.UnsupportedFormat, message);
 
     public static StegoError WrongPassword(string message) => new(StegoErrorCode.WrongPassword, message);
