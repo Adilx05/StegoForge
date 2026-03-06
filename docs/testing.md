@@ -51,6 +51,24 @@ Acceptance criteria traceability for `PayloadEnvelopeSerializerTests`:
   - `Serialize_KnownFixtureEnvelope_ProducesExpectedGoldenBytes`
   - `Deserialize_KnownFixtureEnvelope_ProducesExpectedValues`
 
+
+## Compression failure-path coverage
+
+The following tests lock down extraction behavior when compressed envelope payload bytes are deliberately corrupted:
+
+- `ExtractPayload_CompressedEnvelopeWithCorruptedPayload_ThrowsInvalidPayloadAndMapsToInvalidPayloadCode`
+  - Expected typed exception: `InvalidPayloadException`
+  - Expected mapped error code: `StegoErrorCode.InvalidPayload`
+- `ExtractPayload_CompressedEnvelopeWithTruncatedPayload_ThrowsInvalidPayloadAndMapsToInvalidPayloadCode`
+  - Expected typed exception: `InvalidPayloadException`
+  - Expected mapped error code: `StegoErrorCode.InvalidPayload`
+- `CreateFailureFromException_DecompressionCorruption_MapsToInvalidPayloadDeterministically`
+  - Expected mapped error code: `StegoErrorCode.InvalidPayload`
+  - Expected CLI exit code: `6`
+- `CreateFailureFromException_DecompressionUnexpectedFailure_ProducesNonZeroExitCode`
+  - Expected mapped error code: `StegoErrorCode.InternalProcessingFailure`
+  - Expected CLI exit code: `1`
+
 ## Test categories to prioritize
 
 1. **Payload framing correctness**

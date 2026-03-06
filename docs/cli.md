@@ -34,7 +34,7 @@ The CLI will map `StegoErrorCode` values to deterministic non-zero process exit 
 | `InvalidArguments` | `3` | Invalid/missing arguments or invalid option combinations. |
 | `CorruptedData` | `4` | Encoded data is malformed/truncated/invalid. |
 | `UnsupportedFormat` | `5` | Carrier or payload format not supported. |
-| `InvalidPayload` | `6` | Payload validation failure before/while processing. |
+| `InvalidPayload` | `6` | Payload validation failure before/while processing, including corrupted/truncated compressed payload data during decompression. |
 | `InvalidHeader` | `7` | Embedded header is invalid or incompatible. |
 | `WrongPassword` | `8` | Authentication/decryption failed due to secret mismatch. |
 | `InsufficientCapacity` | `9` | Carrier capacity is too small for requested operation. |
