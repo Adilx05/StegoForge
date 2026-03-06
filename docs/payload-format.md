@@ -71,3 +71,34 @@ Header serialization is deterministic and length-prefixed per field by the seria
 - Never reuse nonce+key pairs.
 - Avoid leaking sensitive metadata in plaintext when encryption is enabled.
 - Resist malformation attacks with strict bounds checking during decode.
+
+
+## Parser rules (strict decode contract)
+
+Deserializer implementations must follow a strict, deterministic parse strategy:
+
+1. Perform bounds checks **before every read** (single-byte or length-prefixed).
+2. Validate fixed prefix fields in order: `Magic`, `Version`, then `Flags`.
+3. Reject any v1 `Flags` value that sets reserved bits 3-7.
+4. Read each declared length (`HeaderLength`, `PayloadLength`, `IntegrityLength`) and reject when the declared size exceeds remaining bytes.
+5. Parse header with schema byte `0x01` for v1 and reject unknown schema identifiers.
+6. Reject envelopes that contain trailing bytes after `IntegrityData`.
+7. Reject header blocks that contain trailing bytes after all defined header fields are read.
+
+## Deterministic failure mapping
+
+To keep CLI/GUI handling stable, parser failures should map to StegoForge typed exceptions as follows:
+
+- `InvalidHeaderException`
+  - bad magic marker
+  - unsupported version
+  - reserved/invalid flags
+  - unknown/invalid header schema
+  - metadata/flag consistency violations
+- `InvalidPayloadException`
+  - truncated stream during any read
+  - declared lengths larger than remaining bytes
+  - payload/integrity lengths beyond supported in-memory limits
+  - trailing bytes after complete envelope decode
+- `CorruptedDataException` (optional wrapper at higher layers)
+  - may be used by extraction orchestration to normalize lower-level payload failures while preserving deterministic `StegoErrorCode` mapping.
