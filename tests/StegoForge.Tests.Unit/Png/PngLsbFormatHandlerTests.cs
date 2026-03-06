@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using StegoForge.Core.Errors;
 using StegoForge.Formats.Png;
+using Xunit;
 
 namespace StegoForge.Tests.Unit.Png;
 
