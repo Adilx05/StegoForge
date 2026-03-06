@@ -35,6 +35,21 @@ When working on payload envelope framing, you can run only the envelope-related 
 
 This filter matches `PayloadEnvelopeSerializerTests`/`PayloadEnvelopeContractsTests` and gives fast feedback before broader suite runs.
 
+
+## Compression-focused test commands
+
+When changing compression behavior, run these focused commands before broader suites:
+
+```bash
+# Compression provider unit tests (Deflate provider behavior and error mapping)
+ dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --filter "FullyQualifiedName~CompressionProviderContractTests|FullyQualifiedName~DeflateCompressionProviderTests"
+
+# Compression orchestration integration tests (policy + envelope metadata/flags)
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~CompressionOrchestrationIntegrationTests
+```
+
+These commands specifically cover compression provider contract enforcement, compression-mode policy (`Disabled`/`Enabled`/`Automatic`), and deterministic decompression failure behavior.
+
 ## WPF-only build/test
 
 > Recommended on Windows with desktop workloads installed.

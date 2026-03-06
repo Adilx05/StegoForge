@@ -57,6 +57,23 @@ Dependencies should flow inward:
 4. Envelope verification and payload reconstruction.
 5. Result includes payload stream/file and metadata.
 
+
+## Provider selection strategy and fallback behavior
+
+Application orchestration should resolve providers through deterministic selection rules so behavior is predictable across CLI and GUI:
+
+1. Resolve requested algorithm id from operation options/metadata (for example, compression descriptor in payload header on extract).
+2. Match by exact provider `AlgorithmId` (case-insensitive comparison recommended for UX, while diagnostics should report canonical provider id).
+3. If exactly one provider matches, use it and record `AlgorithmIdentifier`/`ProviderIdentifier` in diagnostics.
+
+Fallback behavior when a requested algorithm is unavailable:
+
+- **Embed, explicit user-requested algorithm:** fail fast with `UnsupportedFormat` (or `InvalidArguments` when option syntax itself is invalid). Do not silently switch to another algorithm because this would change output determinism and user intent.
+- **Embed, automatic/default selection:** if preferred provider is unavailable but another provider satisfies policy constraints, orchestration may fall back to the configured default provider and emit a diagnostics warning describing the fallback. If no provider is available, fail with `UnsupportedFormat`.
+- **Extract, algorithm indicated by envelope metadata/flags:** never substitute a different provider. Missing provider support must fail deterministically with `UnsupportedFormat`; mismatched/corrupt compressed/encrypted bytes should continue to map to typed payload/crypto failures (`InvalidPayloadException`, `WrongPassword`, etc.) as applicable.
+
+These rules preserve compatibility and make failure modes explicit when environments differ in installed provider sets.
+
 ## Finalized core contracts
 
 ### Compression provider contract (`ICompressionProvider`)

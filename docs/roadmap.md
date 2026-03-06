@@ -36,11 +36,11 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Add pluggable compression for payload preprocessing.
 
-**Acceptance criteria:**
+**Implementation status (tracked):**
 
-- At least one compression implementation (e.g., Deflate/Brotli).
-- Compression can be toggled via embed request options.
-- Decompression failures are surfaced with precise errors.
+- [x] Deflate provider implements `ICompressionProvider` with stable `AlgorithmId` and level-range metadata in `src/StegoForge.Compression/Deflate/DeflateCompressionProvider.cs`, validated by `ProviderMetadata_UsesExpectedRangeAndAlgorithmId` in `tests/StegoForge.Tests.Unit/Compression/DeflateCompressionProviderTests.cs` and interface/contract checks in `tests/StegoForge.Tests.Unit/CompressionProviderContractTests.cs`.
+- [x] Embed-time compression policy supports `Disabled`, `Enabled`, and `Automatic` modes in `src/StegoForge.Application/Payload/PayloadOrchestrationService.cs`, validated by `EmbedExtract_CompressionDisabled_SkipsCompressionAndKeepsMetadataConsistent`, `EmbedExtract_CompressionEnabled_AlwaysCompressesAndExtractDecompresses`, and `EmbedExtract_CompressionAutomatic_CompressesOnlyWhenSmaller_WithConsistentMetadataFlag` in `tests/StegoForge.Tests.Integration/CompressionOrchestrationIntegrationTests.cs`.
+- [x] Decompression failure paths map malformed/truncated compressed payloads to deterministic `InvalidPayloadException`/`StegoErrorCode.InvalidPayload` outcomes in `src/StegoForge.Compression/Deflate/DeflateCompressionProvider.cs`, validated by `Decompress_ThrowsInvalidPayloadException_ForMalformedCompressedBytes`, `ExtractPayload_CompressedEnvelopeWithCorruptedPayload_ThrowsInvalidPayloadAndMapsToInvalidPayloadCode`, and `ExtractPayload_CompressedEnvelopeWithTruncatedPayload_ThrowsInvalidPayloadAndMapsToInvalidPayloadCode`.
 
 ## Milestone 5 — Crypto provider integration
 
