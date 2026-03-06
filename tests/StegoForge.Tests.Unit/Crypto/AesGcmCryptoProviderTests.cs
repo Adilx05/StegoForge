@@ -78,6 +78,51 @@ public sealed class AesGcmCryptoProviderTests
     }
 
     [Fact]
+    public void Decrypt_WithWrongPassword_ThrowsWrongPasswordException()
+    {
+        var encrypted = Provider.Encrypt(new CryptoEncryptRequest([1, 2, 3, 4], passphrase: "correct-password"));
+
+        var exception = Assert.Throws<WrongPasswordException>(() =>
+            Provider.Decrypt(new CryptoDecryptRequest(
+                encrypted.Ciphertext,
+                encrypted.Nonce,
+                encrypted.Salt,
+                encrypted.AuthenticationTag,
+                passphrase: "incorrect-password")));
+
+        Assert.Contains("Unable to authenticate and decrypt payload", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Decrypt_WithTamperedCiphertextOrAuthTag_ThrowsWrongPasswordException(bool tamperCiphertext)
+    {
+        var encrypted = Provider.Encrypt(new CryptoEncryptRequest([7, 8, 9, 10], passphrase: "secret"));
+        var ciphertext = encrypted.Ciphertext.ToArray();
+        var tag = encrypted.AuthenticationTag.ToArray();
+
+        if (tamperCiphertext)
+        {
+            ciphertext[0] ^= 0x01;
+        }
+        else
+        {
+            tag[0] ^= 0x01;
+        }
+
+        var exception = Assert.Throws<WrongPasswordException>(() =>
+            Provider.Decrypt(new CryptoDecryptRequest(
+                ciphertext,
+                encrypted.Nonce,
+                encrypted.Salt,
+                tag,
+                passphrase: "secret")));
+
+        Assert.Equal(StegoErrorCode.WrongPassword, StegoErrorMapper.FromException(exception).Code);
+    }
+
+    [Fact]
     public void Encrypt_ThrowsInvalidPayloadException_WhenKeyMaterialLengthIsInvalid()
     {
         var exception = Assert.Throws<InvalidPayloadException>(() =>
