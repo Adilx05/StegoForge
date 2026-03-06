@@ -11,6 +11,7 @@ namespace StegoForge.Tests.Integration;
 public sealed class CompressionOrchestrationIntegrationTests
 {
     private readonly PayloadOrchestrationService _service = new(new DeflateCompressionProvider(), new AesGcmCryptoProvider());
+    private readonly PayloadEnvelopeSerializer _serializer = new();
 
     [Fact]
     public void EmbedExtract_CompressionDisabled_SkipsCompressionAndKeepsMetadataConsistent()
@@ -113,6 +114,41 @@ public sealed class CompressionOrchestrationIntegrationTests
 
         Assert.Throws<WrongPasswordException>(() =>
             _service.ExtractPayload(envelope, options, new PasswordOptions(PasswordRequirement.Required), passphrase: null));
+    }
+
+    [Fact]
+    public void EmbedExtract_EncryptedPayload_WithWrongPassword_MapsToWrongPasswordCode()
+    {
+        var source = CreateHighlyCompressiblePayload();
+        var options = new ProcessingOptions(encryptionMode: EncryptionMode.Optional);
+        var envelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: "secret");
+
+        var exception = Assert.Throws<WrongPasswordException>(() =>
+            _service.ExtractPayload(envelope, options, PasswordOptions.Optional, passphrase: "not-secret"));
+
+        Assert.Equal(StegoErrorCode.WrongPassword, StegoErrorMapper.FromException(exception).Code);
+    }
+
+    [Fact]
+    public void EmbedExtract_EncryptedPayload_WithTamperedEnvelopeBytes_FailsWithDeterministicTypedError()
+    {
+        var source = CreateHighlyCompressiblePayload();
+        var options = new ProcessingOptions(encryptionMode: EncryptionMode.Optional);
+        var envelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: "secret");
+        var envelopeBytes = _serializer.Serialize(envelope);
+
+        var tamperedEnvelopeBytes = envelopeBytes.ToArray();
+        tamperedEnvelopeBytes[^3] ^= 0x5A;
+
+        var tamperedEnvelope = _serializer.Deserialize(tamperedEnvelopeBytes);
+
+        var exception = Assert.Throws<WrongPasswordException>(() =>
+            _service.ExtractPayload(tamperedEnvelope, options, PasswordOptions.Optional, passphrase: "secret"));
+
+        var mappedError = StegoErrorMapper.FromException(exception);
+
+        Assert.Equal(StegoErrorCode.WrongPassword, mappedError.Code);
+        Assert.Contains("authenticate", mappedError.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

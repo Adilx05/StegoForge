@@ -63,6 +63,15 @@ public sealed class CoreContractsTests
     }
 
     [Fact]
+    public void ErrorMapper_MapsAuthenticationFailureExceptions_ToWrongPasswordCode()
+    {
+        var mapped = StegoErrorMapper.FromException(new WrongPasswordException("Authentication failed."));
+
+        Assert.Equal(StegoErrorCode.WrongPassword, mapped.Code);
+        Assert.Contains("Authentication failed", mapped.Message);
+    }
+
+    [Fact]
     public void ProcessingOptions_Defaults_AreStable()
     {
         var options = new ProcessingOptions();

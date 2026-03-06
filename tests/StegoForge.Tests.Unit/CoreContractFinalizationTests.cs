@@ -126,6 +126,15 @@ public sealed class CoreContractFinalizationTests
     }
 
     [Fact]
+    public void ErrorMapper_AuthenticationFailures_AlwaysResolveToWrongPasswordCode()
+    {
+        var mapped = StegoErrorMapper.FromException(new WrongPasswordException("AEAD authentication failure."));
+
+        Assert.Equal(StegoErrorCode.WrongPassword, mapped.Code);
+        Assert.Contains("AEAD authentication failure", mapped.Message);
+    }
+
+    [Fact]
     public void ContractSnapshot_KeyDtoPropertyNames_AreStableForSerializationBoundaries()
     {
         var expectedPropertyNames = new Dictionary<Type, string[]>
