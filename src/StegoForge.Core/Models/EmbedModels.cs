@@ -5,10 +5,15 @@ public sealed record EmbedRequest
     public string CarrierPath { get; }
     public string OutputPath { get; }
     public byte[] Payload { get; }
-    public string? Password { get; }
-    public bool Compress { get; }
+    public ProcessingOptions ProcessingOptions { get; }
+    public PasswordOptions PasswordOptions { get; }
 
-    public EmbedRequest(string carrierPath, string outputPath, byte[] payload, string? password = null, bool compress = false)
+    public EmbedRequest(
+        string carrierPath,
+        string outputPath,
+        byte[] payload,
+        ProcessingOptions? processingOptions = null,
+        PasswordOptions? passwordOptions = null)
     {
         if (string.IsNullOrWhiteSpace(carrierPath))
         {
@@ -28,9 +33,50 @@ public sealed record EmbedRequest
         CarrierPath = carrierPath;
         OutputPath = outputPath;
         Payload = payload;
-        Password = password;
-        Compress = compress;
+        ProcessingOptions = processingOptions ?? ProcessingOptions.Default;
+        PasswordOptions = passwordOptions ?? PasswordOptions.Optional;
     }
 }
 
-public sealed record EmbedResponse(string OutputPath, long BytesEmbedded);
+public sealed record EmbedResponse
+{
+    public string OutputPath { get; }
+    public string CarrierFormatId { get; }
+    public long PayloadSizeBytes { get; }
+    public long BytesEmbedded { get; }
+    public OperationDiagnostics Diagnostics { get; }
+
+    public EmbedResponse(
+        string outputPath,
+        string carrierFormatId,
+        long payloadSizeBytes,
+        long bytesEmbedded,
+        OperationDiagnostics? diagnostics = null)
+    {
+        if (string.IsNullOrWhiteSpace(outputPath))
+        {
+            throw new ArgumentException("Output path is required.", nameof(outputPath));
+        }
+
+        if (string.IsNullOrWhiteSpace(carrierFormatId))
+        {
+            throw new ArgumentException("Carrier format identifier is required.", nameof(carrierFormatId));
+        }
+
+        if (payloadSizeBytes < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(payloadSizeBytes), "Payload size cannot be negative.");
+        }
+
+        if (bytesEmbedded < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(bytesEmbedded), "Embedded bytes cannot be negative.");
+        }
+
+        OutputPath = outputPath;
+        CarrierFormatId = carrierFormatId;
+        PayloadSizeBytes = payloadSizeBytes;
+        BytesEmbedded = bytesEmbedded;
+        Diagnostics = diagnostics ?? OperationDiagnostics.Empty;
+    }
+}
