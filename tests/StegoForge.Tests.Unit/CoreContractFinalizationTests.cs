@@ -11,6 +11,9 @@ public sealed class CoreContractFinalizationTests
     private static readonly IReadOnlyDictionary<Type, Func<StegoForgeException>> MapperCoverageFactories =
         new Dictionary<Type, Func<StegoForgeException>>
         {
+            [typeof(FileNotFoundStegoException)] = () => new FileNotFoundStegoException("missing.bin"),
+            [typeof(InvalidArgumentsException)] = () => new InvalidArgumentsException("invalid args"),
+            [typeof(CorruptedDataException)] = () => new CorruptedDataException("corrupted data"),
             [typeof(UnsupportedFormatException)] = () => new UnsupportedFormatException("unsupported"),
             [typeof(WrongPasswordException)] = () => new WrongPasswordException("wrong password"),
             [typeof(InvalidPayloadException)] = () => new InvalidPayloadException("invalid payload"),
@@ -22,6 +25,9 @@ public sealed class CoreContractFinalizationTests
 
     private static readonly IReadOnlyCollection<StegoErrorCode> MapperCoverageCodes =
     [
+        StegoErrorCode.FileNotFound,
+        StegoErrorCode.InvalidArguments,
+        StegoErrorCode.CorruptedData,
         StegoErrorCode.UnsupportedFormat,
         StegoErrorCode.WrongPassword,
         StegoErrorCode.InvalidPayload,

@@ -1,58 +1,43 @@
-# Payload Format (Planned)
+# Payload Format (v1)
 
-This document defines the planned StegoForge payload envelope for embedding into carrier formats.
+This document defines the finalized StegoForge payload envelope for embedding into carrier formats.
 
-## Objectives
+## v1 wire layout
 
-- Versioned and backward-compatible.
-- Supports optional compression and encryption.
-- Includes integrity/authentication information.
-- Efficient enough for constrained carrier capacities.
+All multi-byte integer fields in v1 use **little-endian** byte order.
 
-## Logical envelope structure
+| Field | Size (bytes) | Description |
+|---|---:|---|
+| Magic | 4 | Fixed ASCII bytes: `SGF1` |
+| Version | 1 | Envelope version. v1 value is `0x01`. |
+| Flags | 1 | Bit-field defined in `EnvelopeFlags`. |
+| HeaderLength | 2 | Unsigned length of `Header` block. |
+| Header | HeaderLength | Structured metadata block. |
+| PayloadLength | 8 | Unsigned length of `Payload` block. |
+| Payload | PayloadLength | Raw or processed payload bytes per flags/descriptors. |
+| IntegrityLength | 2 | Unsigned length of integrity/authentication data. |
+| IntegrityData | IntegrityLength | Authentication tag, MAC, checksum, or empty when not used. |
 
-```text
-+---------------------------+
-| Magic (4 bytes)          |
-+---------------------------+
-| Version (1 byte)         |
-+---------------------------+
-| Flags (1 byte)           |
-+---------------------------+
-| HeaderLength (2 bytes)   |
-+---------------------------+
-| Header (variable)        |
-+---------------------------+
-| PayloadLength (8 bytes)  |
-+---------------------------+
-| Payload (variable)       |
-+---------------------------+
-| AuthTag/Checksum (var)   |
-+---------------------------+
-```
+## Header fields (v1)
 
-## Header fields (candidate)
+Header serialization is deterministic and length-prefixed per field by the serializer.
 
-- `ContentType` (UTF-8 string; optional)
-- `OriginalFileName` (UTF-8 string; optional)
-- `CreatedUtc` (unix epoch milliseconds)
-- `CompressionAlgorithm` (`none`, `deflate`, `brotli`, ...)
-- `EncryptionAlgorithm` (`none`, `aes-gcm-256`, ...)
-- `KdfAlgorithm` (`none`, `argon2id`, `pbkdf2`)
-- `Nonce/IV`
-- `Salt`
-- `AdditionalAuthenticatedData` (optional)
+| Field | Type | Notes |
+|---|---|---|
+| `OriginalFileName` | UTF-8 string (optional) | Empty/absent indicates unknown. |
+| `OriginalSizeBytes` | Int64 | Original pre-processing size in bytes. |
+| `CreatedUtc` | Int64 | Unix epoch milliseconds. |
+| `CompressionDescriptor` | UTF-8 string | `none`, `deflate`, `brotli`, etc. |
+| `EncryptionDescriptor` | UTF-8 string | `none`, `aes-gcm-256`, etc. |
+| `SaltMetadata` | UTF-8 string (optional) | Encoded salt metadata when encryption/KDF uses one. |
+| `NonceMetadata` | UTF-8 string (optional) | Encoded nonce/IV metadata when required. |
 
-## Flags (candidate bit layout)
+## Flags (v1 bit layout)
 
 - bit 0: payload compressed
 - bit 1: payload encrypted
-- bit 2: metadata present
-- bit 3: multipart payload (future)
-- bit 4: reserved
-- bit 5: reserved
-- bit 6: reserved
-- bit 7: reserved
+- bit 2: optional metadata present
+- bits 3-7: reserved for future versions (must not be repurposed by v1)
 
 ## Processing order
 
@@ -61,14 +46,14 @@ This document defines the planned StegoForge payload envelope for embedding into
 1. Build header metadata.
 2. Compress payload (if enabled).
 3. Encrypt compressed payload + selected header fields (if enabled).
-4. Compute authentication tag/checksum.
+4. Compute integrity/authentication data.
 5. Serialize envelope and pass to format handler.
 
 ### Extract
 
 1. Parse magic/version and validate support.
-2. Parse header and flags.
-3. Verify authentication/checksum.
+2. Parse flags, header, payload, and integrity data.
+3. Verify integrity/authentication data.
 4. Decrypt (if encrypted).
 5. Decompress (if compressed).
 6. Emit payload + metadata.
@@ -77,8 +62,8 @@ This document defines the planned StegoForge payload envelope for embedding into
 
 - Magic identifies StegoForge payloads.
 - Version increments for incompatible wire changes.
-- Minor additive header fields are length-prefixed and skippable.
-- Unsupported version must return a specific `UnsupportedPayloadVersion`-style error.
+- Unknown version values must return an unsupported-version error.
+- Reserved flag bits are preserved for future expansion.
 
 ## Security notes
 
@@ -86,16 +71,3 @@ This document defines the planned StegoForge payload envelope for embedding into
 - Never reuse nonce+key pairs.
 - Avoid leaking sensitive metadata in plaintext when encryption is enabled.
 - Resist malformation attacks with strict bounds checking during decode.
-
-
-## Payload-derived metadata surfaced by API models
-
-When envelope metadata is readable, `CarrierInfoResponse` and `ExtractResponse` surface normalized metadata to callers:
-
-- `OriginalFileName` (nullable): source filename from payload header.
-- `OriginalSizeBytes` (nullable): original pre-processing byte length.
-- `CreatedUtc` (nullable): payload creation timestamp.
-- `HeaderVersion` (required, non-negative): decoded payload-header version.
-- `CompressionDescriptor`, `EncryptionDescriptor`, `IntegrityDescriptor`: human-readable algorithm descriptors (`none` when absent).
-
-These values are descriptive API fields only; they do not replace cryptographic verification. Integrity status is reported separately on extraction via `IntegrityVerificationResult`.
