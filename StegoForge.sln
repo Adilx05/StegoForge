@@ -1,0 +1,87 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Core", "src/StegoForge.Core/StegoForge.Core.csproj", "{D3F3A97B-0F8D-4D9B-8A7E-259A7A1E6E01}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Application", "src/StegoForge.Application/StegoForge.Application.csproj", "{AEBE06A0-60D0-4A8F-B5DD-03DF58E3CA02}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Infrastructure", "src/StegoForge.Infrastructure/StegoForge.Infrastructure.csproj", "{B4894B4A-6D24-4744-9BE9-7B22A23A5D03}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Formats", "src/StegoForge.Formats/StegoForge.Formats.csproj", "{5B15C7FA-6D83-43D7-8CF7-9A50CE74AB04}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Crypto", "src/StegoForge.Crypto/StegoForge.Crypto.csproj", "{211C9E2A-E08D-4D9A-B3F3-93933913FF05}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Compression", "src/StegoForge.Compression/StegoForge.Compression.csproj", "{8D837A7E-E2EC-4D02-A6A7-D12D5A4F6306}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Cli", "src/StegoForge.Cli/StegoForge.Cli.csproj", "{40C0DC74-5B38-4A10-AF22-90647B82B907}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Wpf", "src/StegoForge.Wpf/StegoForge.Wpf.csproj", "{EB75B117-D52D-4B2F-8D09-B9BA0B93D708}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Tests.Unit", "tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj", "{38A744AF-344C-44C4-B142-42FD15A98F09}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Tests.Integration", "tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj", "{0346992A-6A62-47A9-B101-D3AA1716F310}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Tests.Cli", "tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj", "{E93C89AC-0A2B-4958-8E5E-264CE68E0F11}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StegoForge.Tests.Wpf", "tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj", "{58403CE7-0119-4B2D-8578-28AB09EA0812}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D3F3A97B-0F8D-4D9B-8A7E-259A7A1E6E01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3F3A97B-0F8D-4D9B-8A7E-259A7A1E6E01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3F3A97B-0F8D-4D9B-8A7E-259A7A1E6E01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3F3A97B-0F8D-4D9B-8A7E-259A7A1E6E01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AEBE06A0-60D0-4A8F-B5DD-03DF58E3CA02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AEBE06A0-60D0-4A8F-B5DD-03DF58E3CA02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AEBE06A0-60D0-4A8F-B5DD-03DF58E3CA02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AEBE06A0-60D0-4A8F-B5DD-03DF58E3CA02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4894B4A-6D24-4744-9BE9-7B22A23A5D03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4894B4A-6D24-4744-9BE9-7B22A23A5D03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4894B4A-6D24-4744-9BE9-7B22A23A5D03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4894B4A-6D24-4744-9BE9-7B22A23A5D03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5B15C7FA-6D83-43D7-8CF7-9A50CE74AB04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B15C7FA-6D83-43D7-8CF7-9A50CE74AB04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B15C7FA-6D83-43D7-8CF7-9A50CE74AB04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B15C7FA-6D83-43D7-8CF7-9A50CE74AB04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{211C9E2A-E08D-4D9A-B3F3-93933913FF05}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{211C9E2A-E08D-4D9A-B3F3-93933913FF05}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{211C9E2A-E08D-4D9A-B3F3-93933913FF05}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{211C9E2A-E08D-4D9A-B3F3-93933913FF05}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D837A7E-E2EC-4D02-A6A7-D12D5A4F6306}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D837A7E-E2EC-4D02-A6A7-D12D5A4F6306}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D837A7E-E2EC-4D02-A6A7-D12D5A4F6306}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D837A7E-E2EC-4D02-A6A7-D12D5A4F6306}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40C0DC74-5B38-4A10-AF22-90647B82B907}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40C0DC74-5B38-4A10-AF22-90647B82B907}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40C0DC74-5B38-4A10-AF22-90647B82B907}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40C0DC74-5B38-4A10-AF22-90647B82B907}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB75B117-D52D-4B2F-8D09-B9BA0B93D708}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB75B117-D52D-4B2F-8D09-B9BA0B93D708}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB75B117-D52D-4B2F-8D09-B9BA0B93D708}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB75B117-D52D-4B2F-8D09-B9BA0B93D708}.Release|Any CPU.Build.0 = Release|Any CPU
+		{38A744AF-344C-44C4-B142-42FD15A98F09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38A744AF-344C-44C4-B142-42FD15A98F09}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38A744AF-344C-44C4-B142-42FD15A98F09}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38A744AF-344C-44C4-B142-42FD15A98F09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0346992A-6A62-47A9-B101-D3AA1716F310}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0346992A-6A62-47A9-B101-D3AA1716F310}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0346992A-6A62-47A9-B101-D3AA1716F310}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0346992A-6A62-47A9-B101-D3AA1716F310}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E93C89AC-0A2B-4958-8E5E-264CE68E0F11}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E93C89AC-0A2B-4958-8E5E-264CE68E0F11}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E93C89AC-0A2B-4958-8E5E-264CE68E0F11}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E93C89AC-0A2B-4958-8E5E-264CE68E0F11}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58403CE7-0119-4B2D-8578-28AB09EA0812}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58403CE7-0119-4B2D-8578-28AB09EA0812}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58403CE7-0119-4B2D-8578-28AB09EA0812}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58403CE7-0119-4B2D-8578-28AB09EA0812}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
