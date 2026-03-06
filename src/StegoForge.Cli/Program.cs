@@ -1,4 +1,13 @@
-using StegoForge.Application;
+using StegoForge.Cli;
 
-var marker = new ApplicationMarker();
-Console.WriteLine($"StegoForge CLI baseline ready: {marker.GetType().Name}");
+try
+{
+    Console.WriteLine("StegoForge CLI baseline ready.");
+    return 0;
+}
+catch (Exception exception)
+{
+    var failure = CliErrorContract.CreateFailureFromException(exception);
+    Console.Error.WriteLine(failure.Message);
+    return failure.ExitCode;
+}

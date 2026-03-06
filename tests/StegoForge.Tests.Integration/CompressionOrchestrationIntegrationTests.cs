@@ -1,5 +1,6 @@
 using StegoForge.Application.Payload;
 using StegoForge.Compression.Deflate;
+using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
 using StegoForge.Core.Payload;
 using Xunit;
@@ -58,6 +59,54 @@ public sealed class CompressionOrchestrationIntegrationTests
         Assert.False(rawEnvelope.Flags.HasFlag(EnvelopeFlags.Compressed));
         Assert.Equal("none", rawEnvelope.Header.CompressionDescriptor);
         Assert.Equal(incompressible, _service.ExtractPayload(rawEnvelope));
+    }
+
+    [Fact]
+    public void ExtractPayload_CompressedEnvelopeWithCorruptedPayload_ThrowsInvalidPayloadAndMapsToInvalidPayloadCode()
+    {
+        var source = CreateHighlyCompressiblePayload();
+        var options = new ProcessingOptions(compressionMode: CompressionMode.Enabled, compressionLevel: 9);
+        var validEnvelope = _service.CreateEnvelopeForEmbed(source, options);
+
+        var corruptedPayload = validEnvelope.Payload.ToArray();
+        corruptedPayload[0] ^= 0xFF;
+        corruptedPayload[^1] ^= 0x7A;
+
+        var corruptedEnvelope = new PayloadEnvelope(
+            validEnvelope.Version,
+            validEnvelope.Flags,
+            validEnvelope.Header,
+            corruptedPayload,
+            validEnvelope.IntegrityData);
+
+        var exception = Assert.Throws<InvalidPayloadException>(() => _service.ExtractPayload(corruptedEnvelope));
+        var mappedError = StegoErrorMapper.FromException(exception);
+
+        Assert.Equal(StegoErrorCode.InvalidPayload, mappedError.Code);
+        Assert.Contains("Compressed payload is malformed", mappedError.Message);
+        Assert.Contains("extract:payload", mappedError.Message);
+    }
+
+    [Fact]
+    public void ExtractPayload_CompressedEnvelopeWithTruncatedPayload_ThrowsInvalidPayloadAndMapsToInvalidPayloadCode()
+    {
+        var source = CreateHighlyCompressiblePayload();
+        var options = new ProcessingOptions(compressionMode: CompressionMode.Enabled, compressionLevel: 9);
+        var validEnvelope = _service.CreateEnvelopeForEmbed(source, options);
+
+        var truncatedPayload = validEnvelope.Payload.Take(validEnvelope.Payload.Length / 2).ToArray();
+        var truncatedEnvelope = new PayloadEnvelope(
+            validEnvelope.Version,
+            validEnvelope.Flags,
+            validEnvelope.Header,
+            truncatedPayload,
+            validEnvelope.IntegrityData);
+
+        var exception = Assert.Throws<InvalidPayloadException>(() => _service.ExtractPayload(truncatedEnvelope));
+        var mappedError = StegoErrorMapper.FromException(exception);
+
+        Assert.Equal(StegoErrorCode.InvalidPayload, mappedError.Code);
+        Assert.Contains("Compressed payload is malformed", mappedError.Message);
     }
 
     private static byte[] CreateHighlyCompressiblePayload()
