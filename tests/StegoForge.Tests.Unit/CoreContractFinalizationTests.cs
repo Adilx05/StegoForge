@@ -44,6 +44,7 @@ public sealed class CoreContractFinalizationTests
     public void RequestModels_RejectNullOrEmptyCriticalFields()
     {
         Assert.Throws<ArgumentException>(() => new EmbedRequest("carrier.png", "out.png", []));
+        Assert.Throws<ArgumentException>(() => new EmbedRequest("carrier.png", "out.png", null!));
         Assert.Throws<ArgumentException>(() => new EmbedRequest(" ", "out.png", [1]));
         Assert.Throws<ArgumentException>(() => new EmbedRequest("carrier.png", null!, [1]));
 
@@ -87,7 +88,9 @@ public sealed class CoreContractFinalizationTests
             .Where(type => !type.IsAbstract && typeof(StegoForgeException).IsAssignableFrom(type))
             .ToHashSet();
 
-        Assert.Equal(declaredSubtypes, MapperCoverageFactories.Keys.ToHashSet());
+        Assert.True(
+            declaredSubtypes.SetEquals(MapperCoverageFactories.Keys),
+            $"Mapper coverage factories are out of sync with declared exception subtypes. Declared: {string.Join(", ", declaredSubtypes.Select(type => type.Name).OrderBy(name => name, StringComparer.Ordinal))}; Coverage: {string.Join(", ", MapperCoverageFactories.Keys.Select(type => type.Name).OrderBy(name => name, StringComparer.Ordinal))}.");
 
         foreach (var (exceptionType, factory) in MapperCoverageFactories)
         {
@@ -106,7 +109,9 @@ public sealed class CoreContractFinalizationTests
         var declaredCodes = Enum.GetValues<StegoErrorCode>().ToHashSet();
         var coverageCodes = MapperCoverageCodes.ToHashSet();
 
-        Assert.Equal(declaredCodes, coverageCodes);
+        Assert.True(
+            declaredCodes.SetEquals(coverageCodes),
+            $"StegoErrorCode coverage is out of sync. Declared: {string.Join(", ", declaredCodes.OrderBy(code => code))}; Coverage: {string.Join(", ", coverageCodes.OrderBy(code => code))}.");
 
         foreach (var exception in MapperCoverageFactories.Values.Select(factory => factory()))
         {
