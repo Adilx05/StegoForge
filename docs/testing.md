@@ -57,3 +57,13 @@
 - Run unit + CLI/integration tests on all supported platforms.
 - Run WPF tests on Windows runners.
 - Publish test results and coverage artifacts.
+
+## Milestone 2 Contract Stability Tests
+
+Milestone 2 adds contract-stability tests that lock down core API expectations shared by the Core, CLI, and WPF layers. These tests are required to prevent accidental breaking changes by:
+
+- Verifying service interfaces keep async + `CancellationToken` signatures.
+- Guarding request validation for null/empty critical fields.
+- Ensuring response DTOs always expose diagnostics containers.
+- Enforcing full `StegoForgeException` and `StegoErrorCode` mapper coverage via reflection/data parity checks.
+- Snapshotting key DTO property names used at serialization boundaries for machine-output stability.
