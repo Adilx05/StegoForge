@@ -93,8 +93,12 @@ public sealed class AesGcmCryptoProvider : ICryptoProvider
         if (!string.IsNullOrWhiteSpace(passphrase))
         {
             EnsureSupportedKdf(options.AlgorithmId);
-            var pbkdf2 = new Rfc2898DeriveBytes(passphrase, salt, options.IterationCount, HashAlgorithmName.SHA256);
-            return pbkdf2.GetBytes(KeyLengthBytes);
+            return Rfc2898DeriveBytes.Pbkdf2(
+                passphrase,
+                salt,
+                options.IterationCount,
+                HashAlgorithmName.SHA256,
+                KeyLengthBytes);
         }
 
         if (keyMaterial is null || keyMaterial.Length == 0)
