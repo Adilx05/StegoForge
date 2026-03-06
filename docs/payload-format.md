@@ -58,6 +58,22 @@ Header serialization is deterministic and length-prefixed per field by the seria
 5. Decompress (if compressed).
 6. Emit payload + metadata.
 
+
+## Compression flag + descriptor interpretation (finalized v1 behavior)
+
+Compression state is encoded redundantly by design and must remain internally consistent:
+
+- `Flags` bit 0 (`payload compressed`) is the authoritative processing signal for extraction behavior.
+- `Header.CompressionDescriptor` carries the algorithm identity used at embed time (`deflate`, `brotli`, etc.) or `none` when compression is not applied.
+
+Extraction logic interprets these fields as follows:
+
+1. If bit 0 is **clear**, extraction must treat `Payload` as uncompressed and must not invoke a decompressor.
+2. If bit 0 is **set**, extraction must invoke the decompressor path for `Payload`; malformed or truncated compressed bytes must fail deterministically as `InvalidPayloadException`.
+3. Header/flag mismatches (for example, compressed flag set with descriptor `none`, or compressed flag clear with non-`none` descriptor) are header-contract violations and should be rejected as `InvalidHeaderException`.
+
+This rule set ensures the wire format remains machine-readable while preserving deterministic error mapping across CLI and GUI surfaces.
+
 ## Versioning strategy
 
 - Magic identifies StegoForge payloads.
