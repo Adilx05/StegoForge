@@ -116,3 +116,14 @@ Errors should be expressed via `StegoErrorCode` + message + optional context so 
 - Cloud KMS dependency in v1 baseline.
 - Lossy format support that cannot guarantee deterministic recovery.
 - Hidden runtime plugin loading (explicit registration preferred).
+
+
+## Payload envelope error contract
+
+Payload envelope serialization/deserialization must throw StegoForge typed exceptions only, so `StegoErrorMapper` can produce stable machine-readable errors:
+
+- Header contract violations (`magic`, `version`, `flags`, header schema, metadata flag mismatches) -> `InvalidHeaderException`.
+- Structural/bounds failures (truncation, declared lengths beyond available data, trailing bytes, inconsistent block lengths) -> `InvalidPayloadException`.
+- Unexpected internal failures should be translated to `InternalProcessingException` at orchestration boundaries when needed, preserving user-safe messages.
+
+This contract ensures deterministic error-code behavior across CLI and GUI surfaces without requiring transport-specific parsing logic in presentation layers.
