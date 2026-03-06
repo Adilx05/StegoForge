@@ -1,5 +1,17 @@
 namespace StegoForge.Core.Errors;
 
+public sealed class FileNotFoundStegoException(string path)
+    : StegoForgeException(StegoErrorCode.FileNotFound, $"File not found: {path}")
+{
+    public string Path { get; } = path;
+}
+
+public sealed class InvalidArgumentsException(string message)
+    : StegoForgeException(StegoErrorCode.InvalidArguments, message);
+
+public sealed class CorruptedDataException(string message)
+    : StegoForgeException(StegoErrorCode.CorruptedData, message);
+
 public sealed class UnsupportedFormatException(string message)
     : StegoForgeException(StegoErrorCode.UnsupportedFormat, message);
 

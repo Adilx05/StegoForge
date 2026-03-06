@@ -7,16 +7,30 @@ namespace StegoForge.Tests.Unit;
 public sealed class CoreContractsTests
 {
     [Theory]
+    [InlineData(typeof(FileNotFoundStegoException), StegoErrorCode.FileNotFound)]
+    [InlineData(typeof(InvalidArgumentsException), StegoErrorCode.InvalidArguments)]
+    [InlineData(typeof(CorruptedDataException), StegoErrorCode.CorruptedData)]
     [InlineData(typeof(UnsupportedFormatException), StegoErrorCode.UnsupportedFormat)]
     [InlineData(typeof(WrongPasswordException), StegoErrorCode.WrongPassword)]
     [InlineData(typeof(InvalidPayloadException), StegoErrorCode.InvalidPayload)]
     [InlineData(typeof(InvalidHeaderException), StegoErrorCode.InvalidHeader)]
     [InlineData(typeof(OutputExistsException), StegoErrorCode.OutputAlreadyExists)]
+    [InlineData(typeof(InternalProcessingException), StegoErrorCode.InternalProcessingFailure)]
     public void ErrorMapper_MapsTypedExceptions(Type exceptionType, StegoErrorCode expectedCode)
     {
-        var exception = exceptionType == typeof(OutputExistsException)
-            ? new OutputExistsException("output.png")
-            : (Exception)Activator.CreateInstance(exceptionType, "boom")!;
+        Exception exception;
+        if (exceptionType == typeof(FileNotFoundStegoException))
+        {
+            exception = new FileNotFoundStegoException("missing.bin");
+        }
+        else if (exceptionType == typeof(OutputExistsException))
+        {
+            exception = new OutputExistsException("output.png");
+        }
+        else
+        {
+            exception = (Exception)Activator.CreateInstance(exceptionType, "boom")!;
+        }
 
         var mapped = StegoErrorMapper.FromException(exception);
 
@@ -41,7 +55,7 @@ public sealed class CoreContractsTests
         var mapped = StegoErrorMapper.FromException(new InvalidOperationException("unexpected"));
 
         Assert.Equal(StegoErrorCode.InternalProcessingFailure, mapped.Code);
-        Assert.Equal("unexpected", mapped.Message);
+        Assert.Equal("An internal processing failure occurred. Retry with verbose diagnostics or contact support.", mapped.Message);
     }
 
     [Fact]
