@@ -51,6 +51,14 @@ public sealed class DeflateCompressionProvider : ICompressionProvider
             deflateStream.CopyTo(output);
 
             var data = output.ToArray();
+            if (data.Length == 0)
+            {
+                var contextSuffix = string.IsNullOrWhiteSpace(request.DiagnosticsContext)
+                    ? string.Empty
+                    : $" Context: {request.DiagnosticsContext}.";
+                throw new InvalidPayloadException($"Compressed payload is malformed or does not match the expected compression format.{contextSuffix}");
+            }
+
             return new DecompressionResponse(data, request.DiagnosticsContext);
         }
         catch (Exception exception)
