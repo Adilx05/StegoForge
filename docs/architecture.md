@@ -59,6 +59,17 @@ Dependencies should flow inward:
 
 ## Finalized core contracts
 
+### Compression provider contract (`ICompressionProvider`)
+
+| Contract element | Semantics |
+| --- | --- |
+| Provider identity | `AlgorithmId` must be stable and machine-readable so envelope metadata and diagnostics can reference the selected codec deterministically. |
+| Capability metadata | `MinimumCompressionLevel` and `MaximumCompressionLevel` declare the provider-supported inclusive level range. Callers should validate selected levels against this range before invoking compression. |
+| Compression API | `Compress(CompressionRequest)` consumes immutable request data (`Data`, `CompressionLevel`, optional `DiagnosticsContext`) and returns `CompressionResponse` containing compressed bytes and the applied level. |
+| Decompression API | `Decompress(DecompressionRequest)` consumes compressed bytes plus optional diagnostics context and returns `DecompressionResponse` containing decompressed bytes. |
+| Null/empty handling | Request/response value objects reject null payloads and reject empty payloads to keep error behavior deterministic at the boundary. |
+| Decompression failure contract | Malformed compressed data, truncation, and codec-mismatch conditions must surface as `InvalidPayloadException`. Unexpected implementation/runtime failures must be wrapped as `InternalProcessingException` (preserving the original exception as `InnerException`). |
+
 ### Shared option/value blocks
 
 | Type | Fields | Behavioral guarantees |
