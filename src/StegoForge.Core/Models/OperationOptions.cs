@@ -48,6 +48,7 @@ public sealed record ProcessingOptions
     public EncryptionMode EncryptionMode { get; }
     public OverwriteBehavior OverwriteBehavior { get; }
     public VerbosityMode VerbosityMode { get; }
+    public EncryptionOptions EncryptionOptions { get; }
 
     public static ProcessingOptions Default { get; } = new();
 
@@ -56,7 +57,8 @@ public sealed record ProcessingOptions
         int compressionLevel = 5,
         EncryptionMode encryptionMode = EncryptionMode.Optional,
         OverwriteBehavior overwriteBehavior = OverwriteBehavior.Disallow,
-        VerbosityMode verbosityMode = VerbosityMode.Normal)
+        VerbosityMode verbosityMode = VerbosityMode.Normal,
+        EncryptionOptions? encryptionOptions = null)
     {
         if (compressionLevel is < 0 or > 9)
         {
@@ -68,6 +70,7 @@ public sealed record ProcessingOptions
         EncryptionMode = encryptionMode;
         OverwriteBehavior = overwriteBehavior;
         VerbosityMode = verbosityMode;
+        EncryptionOptions = encryptionOptions ?? EncryptionOptions.Default;
     }
 }
 
