@@ -12,7 +12,7 @@ namespace StegoForge.Formats.Png;
 
 public sealed class PngLsbFormatHandler : ICarrierFormatHandler
 {
-    private const int PayloadLengthPrefixBytes = sizeof(int);
+    private static readonly PngLsbCapacityCalculator CapacityCalculator = new();
     private static readonly CarrierFormatDetails Details = new("png-lsb-v1", "PNG LSB (v1)", "1.0.0");
     private static readonly string[] SupportedColorTypes = [nameof(PngColorType.Rgb), nameof(PngColorType.RgbWithAlpha)];
 
@@ -33,8 +33,7 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
 
         using var buffer = await CreateSeekableCopyAsync(carrierStream, cancellationToken).ConfigureAwait(false);
         var info = GetRequiredSupportedPngInfo(buffer);
-        var maxBytes = GetMaximumPayloadCapacityBytes(info.Width, info.Height);
-        return maxBytes;
+        return CapacityCalculator.Calculate(info.Width, info.Height, channelsUsed: 3).MaximumRawEmbeddableBytes;
     }
 
     public async Task EmbedAsync(Stream carrierStream, Stream outputStream, byte[] payload, CancellationToken cancellationToken = default)
@@ -52,7 +51,7 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         using var inputBuffer = await CreateSeekableCopyAsync(carrierStream, cancellationToken).ConfigureAwait(false);
         var info = GetRequiredSupportedPngInfo(inputBuffer);
 
-        var maxPayloadBytes = GetMaximumPayloadCapacityBytes(info.Width, info.Height);
+        var maxPayloadBytes = CapacityCalculator.Calculate(info.Width, info.Height, channelsUsed: 3).MaximumRawEmbeddableBytes;
         if (payload.Length > maxPayloadBytes)
         {
             throw new InsufficientCapacityException(payload.Length, maxPayloadBytes);
@@ -60,9 +59,9 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
 
         inputBuffer.Position = 0;
         using var image = Image.Load<Rgba32>(inputBuffer);
-        var framedPayload = new byte[PayloadLengthPrefixBytes + payload.Length];
-        BinaryPrimitives.WriteInt32BigEndian(framedPayload.AsSpan(0, PayloadLengthPrefixBytes), payload.Length);
-        payload.CopyTo(framedPayload, PayloadLengthPrefixBytes);
+        var framedPayload = new byte[PngLsbCapacityCalculator.PayloadLengthPrefixBytes + payload.Length];
+        BinaryPrimitives.WriteInt32BigEndian(framedPayload.AsSpan(0, PngLsbCapacityCalculator.PayloadLengthPrefixBytes), payload.Length);
+        payload.CopyTo(framedPayload, PngLsbCapacityCalculator.PayloadLengthPrefixBytes);
 
         EmbedBits(image, framedPayload, cancellationToken);
 
@@ -90,14 +89,14 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         var bitReader = EnumerateCarrierBits(image, cancellationToken).GetEnumerator();
         try
         {
-            var header = ReadBytes(bitReader, PayloadLengthPrefixBytes);
+            var header = ReadBytes(bitReader, PngLsbCapacityCalculator.PayloadLengthPrefixBytes);
             var payloadLength = BinaryPrimitives.ReadInt32BigEndian(header);
             if (payloadLength < 0)
             {
                 throw new CorruptedDataException("Embedded payload length is invalid.");
             }
 
-            var maxPayloadBytes = GetMaximumPayloadCapacityBytes(info.Width, info.Height);
+            var maxPayloadBytes = CapacityCalculator.Calculate(info.Width, info.Height, channelsUsed: 3).MaximumRawEmbeddableBytes;
             if (payloadLength > maxPayloadBytes)
             {
                 throw new CorruptedDataException("Embedded payload length exceeds carrier capacity.");
@@ -119,7 +118,7 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         using var buffer = await CreateSeekableCopyAsync(carrierStream, cancellationToken).ConfigureAwait(false);
         var info = GetRequiredSupportedPngInfo(buffer);
 
-        var maxPayloadBytes = GetMaximumPayloadCapacityBytes(info.Width, info.Height);
+        var maxPayloadBytes = CapacityCalculator.Calculate(info.Width, info.Height, channelsUsed: 3).MaximumRawEmbeddableBytes;
         var diagnostics = new OperationDiagnostics(
             notes:
             [
@@ -139,13 +138,6 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
             supportsEncryption: true,
             supportsCompression: true,
             diagnostics: diagnostics);
-    }
-
-    private static long GetMaximumPayloadCapacityBytes(int width, int height)
-    {
-        var totalRgbBits = (long)width * height * 3L;
-        var totalBytes = totalRgbBits / 8L;
-        return Math.Max(0L, totalBytes - PayloadLengthPrefixBytes);
     }
 
     private static void EmbedBits(Image<Rgba32> image, byte[] payload, CancellationToken cancellationToken)
