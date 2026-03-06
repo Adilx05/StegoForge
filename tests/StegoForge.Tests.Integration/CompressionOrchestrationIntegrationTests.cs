@@ -3,13 +3,14 @@ using StegoForge.Compression.Deflate;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
 using StegoForge.Core.Payload;
+using StegoForge.Crypto.AesGcm;
 using Xunit;
 
 namespace StegoForge.Tests.Integration;
 
 public sealed class CompressionOrchestrationIntegrationTests
 {
-    private readonly PayloadOrchestrationService _service = new(new DeflateCompressionProvider());
+    private readonly PayloadOrchestrationService _service = new(new DeflateCompressionProvider(), new AesGcmCryptoProvider());
 
     [Fact]
     public void EmbedExtract_CompressionDisabled_SkipsCompressionAndKeepsMetadataConsistent()
@@ -17,8 +18,8 @@ public sealed class CompressionOrchestrationIntegrationTests
         var source = CreateHighlyCompressiblePayload();
         var options = new ProcessingOptions(compressionMode: CompressionMode.Disabled, compressionLevel: 9);
 
-        var envelope = _service.CreateEnvelopeForEmbed(source, options, originalFileName: "payload.txt");
-        var extracted = _service.ExtractPayload(envelope);
+        var envelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: null, originalFileName: "payload.txt");
+        var extracted = _service.ExtractPayload(envelope, options, PasswordOptions.Optional, passphrase: null);
 
         Assert.False(envelope.Flags.HasFlag(EnvelopeFlags.Compressed));
         Assert.Equal("none", envelope.Header.CompressionDescriptor);
@@ -32,8 +33,8 @@ public sealed class CompressionOrchestrationIntegrationTests
         var source = CreateHighlyCompressiblePayload();
         var options = new ProcessingOptions(compressionMode: CompressionMode.Enabled, compressionLevel: 9);
 
-        var envelope = _service.CreateEnvelopeForEmbed(source, options);
-        var extracted = _service.ExtractPayload(envelope);
+        var envelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: null);
+        var extracted = _service.ExtractPayload(envelope, options, PasswordOptions.Optional, passphrase: null);
 
         Assert.True(envelope.Flags.HasFlag(EnvelopeFlags.Compressed));
         Assert.Equal("deflate", envelope.Header.CompressionDescriptor);
@@ -49,16 +50,69 @@ public sealed class CompressionOrchestrationIntegrationTests
         var incompressible = CreatePseudoRandomPayload(2048, seed: 12345);
         var options = new ProcessingOptions(compressionMode: CompressionMode.Automatic, compressionLevel: 9);
 
-        var compressedEnvelope = _service.CreateEnvelopeForEmbed(compressible, options);
-        var rawEnvelope = _service.CreateEnvelopeForEmbed(incompressible, options);
+        var compressedEnvelope = _service.CreateEnvelopeForEmbed(compressible, options, PasswordOptions.Optional, passphrase: null);
+        var rawEnvelope = _service.CreateEnvelopeForEmbed(incompressible, options, PasswordOptions.Optional, passphrase: null);
 
         Assert.True(compressedEnvelope.Flags.HasFlag(EnvelopeFlags.Compressed));
         Assert.Equal("deflate", compressedEnvelope.Header.CompressionDescriptor);
-        Assert.Equal(compressible, _service.ExtractPayload(compressedEnvelope));
+        Assert.Equal(compressible, _service.ExtractPayload(compressedEnvelope, options, PasswordOptions.Optional, passphrase: null));
 
         Assert.False(rawEnvelope.Flags.HasFlag(EnvelopeFlags.Compressed));
         Assert.Equal("none", rawEnvelope.Header.CompressionDescriptor);
-        Assert.Equal(incompressible, _service.ExtractPayload(rawEnvelope));
+        Assert.Equal(incompressible, _service.ExtractPayload(rawEnvelope, options, PasswordOptions.Optional, passphrase: null));
+    }
+
+    [Fact]
+    public void EmbedExtract_EncryptionOptional_WithoutPassword_RemainsUnencrypted()
+    {
+        var source = CreateHighlyCompressiblePayload();
+        var options = new ProcessingOptions(encryptionMode: EncryptionMode.Optional);
+
+        var envelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: null);
+
+        Assert.False(envelope.Flags.HasFlag(EnvelopeFlags.Encrypted));
+        Assert.Equal("none", envelope.Header.EncryptionDescriptor);
+        Assert.Equal(source, _service.ExtractPayload(envelope, options, PasswordOptions.Optional, passphrase: null));
+    }
+
+    [Fact]
+    public void EmbedExtract_EncryptionEnabledWithPassword_EncryptsAndDecrypts()
+    {
+        var source = CreateHighlyCompressiblePayload();
+        var options = new ProcessingOptions(encryptionMode: EncryptionMode.Optional);
+
+        var envelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: "secret");
+        var extracted = _service.ExtractPayload(envelope, options, PasswordOptions.Optional, passphrase: "secret");
+
+        Assert.True(envelope.Flags.HasFlag(EnvelopeFlags.Encrypted));
+        Assert.Contains("enc:aes-256-gcm", envelope.Header.EncryptionDescriptor);
+        Assert.NotNull(envelope.Header.SaltMetadata);
+        Assert.NotNull(envelope.Header.NonceMetadata);
+        Assert.NotEmpty(envelope.IntegrityData);
+        Assert.Equal(source, extracted);
+    }
+
+    [Fact]
+    public void Embed_EncryptionRequiredWithoutPassword_Throws()
+    {
+        var source = CreateHighlyCompressiblePayload();
+        var options = new ProcessingOptions(encryptionMode: EncryptionMode.Required);
+
+        var ex = Assert.Throws<WrongPasswordException>(() =>
+            _service.CreateEnvelopeForEmbed(source, options, new PasswordOptions(PasswordRequirement.Required), passphrase: null));
+
+        Assert.Contains("required", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Extract_EncryptedEnvelopeWithoutRequiredPassword_Throws()
+    {
+        var source = CreateHighlyCompressiblePayload();
+        var options = new ProcessingOptions(encryptionMode: EncryptionMode.Optional);
+        var envelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: "secret");
+
+        Assert.Throws<WrongPasswordException>(() =>
+            _service.ExtractPayload(envelope, options, new PasswordOptions(PasswordRequirement.Required), passphrase: null));
     }
 
     [Fact]
@@ -66,7 +120,7 @@ public sealed class CompressionOrchestrationIntegrationTests
     {
         var source = CreateHighlyCompressiblePayload();
         var options = new ProcessingOptions(compressionMode: CompressionMode.Enabled, compressionLevel: 9);
-        var validEnvelope = _service.CreateEnvelopeForEmbed(source, options);
+        var validEnvelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: null);
 
         var corruptedPayload = validEnvelope.Payload.ToArray();
         corruptedPayload[0] ^= 0xFF;
@@ -79,7 +133,7 @@ public sealed class CompressionOrchestrationIntegrationTests
             corruptedPayload,
             validEnvelope.IntegrityData);
 
-        var exception = Assert.Throws<InvalidPayloadException>(() => _service.ExtractPayload(corruptedEnvelope));
+        var exception = Assert.Throws<InvalidPayloadException>(() => _service.ExtractPayload(corruptedEnvelope, options, PasswordOptions.Optional, passphrase: null));
         var mappedError = StegoErrorMapper.FromException(exception);
 
         Assert.Equal(StegoErrorCode.InvalidPayload, mappedError.Code);
@@ -92,7 +146,7 @@ public sealed class CompressionOrchestrationIntegrationTests
     {
         var source = CreateHighlyCompressiblePayload();
         var options = new ProcessingOptions(compressionMode: CompressionMode.Enabled, compressionLevel: 9);
-        var validEnvelope = _service.CreateEnvelopeForEmbed(source, options);
+        var validEnvelope = _service.CreateEnvelopeForEmbed(source, options, PasswordOptions.Optional, passphrase: null);
 
         var truncatedPayload = validEnvelope.Payload.Take(validEnvelope.Payload.Length / 2).ToArray();
         var truncatedEnvelope = new PayloadEnvelope(
@@ -102,7 +156,7 @@ public sealed class CompressionOrchestrationIntegrationTests
             truncatedPayload,
             validEnvelope.IntegrityData);
 
-        var exception = Assert.Throws<InvalidPayloadException>(() => _service.ExtractPayload(truncatedEnvelope));
+        var exception = Assert.Throws<InvalidPayloadException>(() => _service.ExtractPayload(truncatedEnvelope, options, PasswordOptions.Optional, passphrase: null));
         var mappedError = StegoErrorMapper.FromException(exception);
 
         Assert.Equal(StegoErrorCode.InvalidPayload, mappedError.Code);
