@@ -76,7 +76,7 @@ public sealed class PngLsbFormatHandlerTests
         using Image<Rgba32> image = new(width, height);
         for (var y = 0; y < height; y++)
         {
-            var row = image.GetPixelRowSpan(y);
+            var row = image.Frames.RootFrame.GetPixelRowSpan(y);
             for (var x = 0; x < width; x++)
             {
                 row[x] = withAlpha
@@ -102,7 +102,7 @@ public sealed class PngLsbFormatHandlerTests
         using Image<L8> image = new(8, 8);
         for (var y = 0; y < image.Height; y++)
         {
-            var row = image.GetPixelRowSpan(y);
+            var row = image.Frames.RootFrame.GetPixelRowSpan(y);
             for (var x = 0; x < row.Length; x++)
             {
                 row[x] = new L8((byte)(x + y));

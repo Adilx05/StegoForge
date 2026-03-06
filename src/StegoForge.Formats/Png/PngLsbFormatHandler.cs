@@ -155,7 +155,7 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         for (var y = 0; y < image.Height && bitIndex < totalBits; y++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var row = image.GetPixelRowSpan(y);
+            var row = image.Frames.RootFrame.GetPixelRowSpan(y);
             for (var x = 0; x < row.Length && bitIndex < totalBits; x++)
             {
                 var pixel = row[x];
@@ -214,7 +214,7 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         for (var y = 0; y < image.Height; y++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var row = image.GetPixelRowSpan(y);
+            var row = image.Frames.RootFrame.GetPixelRowSpan(y);
             for (var x = 0; x < row.Length; x++)
             {
                 var pixel = row[x];
@@ -240,8 +240,15 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
     {
         info = default;
         stream.Position = 0;
-        var imageInfo = Image.Identify(stream, out IImageFormat? format);
-        if (imageInfo is null || !string.Equals(format?.Name, PngFormat.Instance.Name, StringComparison.Ordinal))
+        IImageFormat? format = Image.DetectFormat(stream);
+        if (format is null || !string.Equals(format.Name, PngFormat.Instance.Name, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        stream.Position = 0;
+        var imageInfo = Image.Identify(stream);
+        if (imageInfo is null)
         {
             return false;
         }
@@ -257,7 +264,7 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
             return false;
         }
 
-        info = new PngCarrierInfo(imageInfo.Width, imageInfo.Height, pngMetadata.ColorType);
+        info = new PngCarrierInfo(imageInfo.Width, imageInfo.Height, pngMetadata.ColorType!.Value);
         return true;
     }
 
