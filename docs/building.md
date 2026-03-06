@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- .NET SDK 9.0+ (see `global.json`)
+- .NET SDK 10.0+ (see `global.json`)
 - Git
 - Windows required for WPF build/test workflows
 
@@ -46,6 +46,34 @@
 # Run complete test suite
  dotnet test StegoForge.sln
 ```
+
+## CI workflow behavior (`.github/workflows/ci.yml`)
+
+- `core-cli` job runs on an OS matrix: `ubuntu-latest` and `windows-latest`.
+- `core-cli` restores/builds/tests only cross-platform projects and test suites:
+  - `StegoForge.Core`
+  - `StegoForge.Application`
+  - `StegoForge.Cli`
+  - `StegoForge.Tests.Unit`
+  - `StegoForge.Tests.Integration`
+  - `StegoForge.Tests.Cli`
+- WPF projects are intentionally excluded from `core-cli` to prevent non-Windows CI failures.
+- `wpf` job runs only on `windows-latest` and handles:
+  - `StegoForge.Wpf`
+  - `StegoForge.Tests.Wpf`
+- Both jobs upload `.trx` test result files as build artifacts:
+  - `test-results-core-cli-ubuntu-latest`
+  - `test-results-core-cli-windows-latest`
+  - `test-results-wpf-windows-latest`
+
+## Release workflow behavior (`.github/workflows/release.yml`)
+
+- Trigger: push tags matching `v*` (for example, `v1.2.0`).
+- `package-cli` job (Ubuntu) publishes CLI output from `StegoForge.Cli`.
+- `package-wpf` job (Windows) publishes WPF output from `StegoForge.Wpf`.
+- Release artifact names include the tag name:
+  - `stegoforge-cli-<tag>`
+  - `stegoforge-wpf-<tag>`
 
 ## Useful diagnostics
 

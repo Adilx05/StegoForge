@@ -1,0 +1,53 @@
+name: Release Artifacts
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  package-cli:
+    name: Package CLI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          include-prerelease: true
+
+      - name: Publish CLI
+        run: dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --output artifacts/cli
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stegoforge-cli-${{ github.ref_name }}
+          path: artifacts/cli
+
+  package-wpf:
+    name: Package WPF
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          include-prerelease: true
+
+      - name: Publish WPF
+        run: dotnet publish src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --output artifacts/wpf
+
+      - name: Upload WPF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stegoforge-wpf-${{ github.ref_name }}
+          path: artifacts/wpf

@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  core-cli:
+    name: Core/CLI (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          include-prerelease: true
+
+      - name: Restore core/CLI projects
+        run: |
+          dotnet restore src/StegoForge.Core/StegoForge.Core.csproj
+          dotnet restore src/StegoForge.Application/StegoForge.Application.csproj
+          dotnet restore src/StegoForge.Cli/StegoForge.Cli.csproj
+          dotnet restore tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj
+          dotnet restore tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj
+          dotnet restore tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
+
+      - name: Build core/CLI projects
+        run: |
+          dotnet build src/StegoForge.Core/StegoForge.Core.csproj --configuration Release --no-restore
+          dotnet build src/StegoForge.Application/StegoForge.Application.csproj --configuration Release --no-restore
+          dotnet build src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --no-restore
+          dotnet build tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-restore
+          dotnet build tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-restore
+          dotnet build tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-restore
+
+      - name: Test core/CLI projects
+        run: |
+          dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build --logger "trx;LogFileName=unit.trx" --results-directory TestResults
+          dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build --logger "trx;LogFileName=integration.trx" --results-directory TestResults
+          dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-build --logger "trx;LogFileName=cli.trx" --results-directory TestResults
+
+      - name: Upload core/CLI test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-core-cli-${{ matrix.os }}
+          path: TestResults/*.trx
+          if-no-files-found: warn
+
+  wpf:
+    name: WPF (windows-latest)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          include-prerelease: true
+
+      - name: Restore WPF projects
+        run: |
+          dotnet restore src/StegoForge.Wpf/StegoForge.Wpf.csproj
+          dotnet restore tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
+
+      - name: Build WPF projects
+        run: |
+          dotnet build src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --no-restore
+          dotnet build tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-restore
+
+      - name: Test WPF projects
+        run: dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --logger "trx;LogFileName=wpf.trx" --results-directory TestResults
+
+      - name: Upload WPF test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-wpf-windows-latest
+          path: TestResults/*.trx
+          if-no-files-found: warn
