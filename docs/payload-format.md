@@ -86,3 +86,16 @@ This document defines the planned StegoForge payload envelope for embedding into
 - Never reuse nonce+key pairs.
 - Avoid leaking sensitive metadata in plaintext when encryption is enabled.
 - Resist malformation attacks with strict bounds checking during decode.
+
+
+## Payload-derived metadata surfaced by API models
+
+When envelope metadata is readable, `CarrierInfoResponse` and `ExtractResponse` surface normalized metadata to callers:
+
+- `OriginalFileName` (nullable): source filename from payload header.
+- `OriginalSizeBytes` (nullable): original pre-processing byte length.
+- `CreatedUtc` (nullable): payload creation timestamp.
+- `HeaderVersion` (required, non-negative): decoded payload-header version.
+- `CompressionDescriptor`, `EncryptionDescriptor`, `IntegrityDescriptor`: human-readable algorithm descriptors (`none` when absent).
+
+These values are descriptive API fields only; they do not replace cryptographic verification. Integrity status is reported separately on extraction via `IntegrityVerificationResult`.

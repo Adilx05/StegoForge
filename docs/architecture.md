@@ -81,9 +81,9 @@ Dependencies should flow inward:
 | Response | Fields | Behavioral guarantees |
 | --- | --- | --- |
 | `EmbedResponse` | `OutputPath`, `CarrierFormatId`, `PayloadSizeBytes`, `BytesEmbedded`, `Diagnostics` | Stable machine-readable format identifier and payload/embedded byte counts. Diagnostics always present. |
-| `ExtractResponse` | `OutputPath`, `CarrierFormatId`, `Payload`, `PayloadSizeBytes`, `WasCompressed`, `WasEncrypted`, `Diagnostics` | Payload length is reflected into `PayloadSizeBytes`. Diagnostics always present. |
-| `CapacityResponse` | `CarrierFormatId`, `RequestedPayloadSizeBytes`, `AvailableCapacityBytes`, `CanEmbed`, `RemainingBytes`, `Diagnostics` | Stable machine-readable capacity fields and decision boolean. Diagnostics always present. |
-| `CarrierInfoResponse` | `FormatId`, `CarrierSizeBytes`, `AvailableCapacityBytes`, `SupportsEncryption`, `SupportsCompression`, `Diagnostics` | Stable machine-readable format/capacity flags. Diagnostics always present. |
+| `ExtractResponse` | `OutputPath`, `ResolvedOutputPath`, `CarrierFormatId`, `Payload`, `PayloadSizeBytes`, `OriginalFileName`, `PreservedOriginalFileName`, `IntegrityVerificationResult`, `Warnings`, `WasCompressed`, `WasEncrypted`, `Diagnostics` | Payload bytes are cloned for immutability, length is reflected into `PayloadSizeBytes`, and extraction metadata/integrity outcomes are always explicit. Diagnostics always present. |
+| `CapacityResponse` | `CarrierFormatId`, `RequestedPayloadSizeBytes`, `AvailableCapacityBytes`, `MaximumCapacityBytes`, `SafeUsableCapacityBytes`, `EstimatedOverheadBytes`, `CanEmbed`, `RemainingBytes`, `FailureReason`, `ConstraintBreakdown`, `Diagnostics` | Capacity analysis distinguishes theoretical max vs safe usable capacity and reports overhead plus failure constraints when embed is not possible. Diagnostics always present. |
+| `CarrierInfoResponse` | `FormatId`, `FormatDetails`, `CarrierSizeBytes`, `EstimatedCapacityBytes`, `AvailableCapacityBytes`, `EmbeddedDataPresent`, `SupportsEncryption`, `SupportsCompression`, `PayloadMetadata`, `ProtectionDescriptors`, `Diagnostics` | Provides carrier format detail, size/capacity telemetry, embedded-data signal, payload metadata summary (when readable), and compression/encryption/integrity descriptors. Diagnostics always present. |
 
 ## Error model
 
