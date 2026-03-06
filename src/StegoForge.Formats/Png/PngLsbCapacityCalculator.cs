@@ -42,11 +42,11 @@ public sealed class PngLsbCapacityCalculator
         var canEmbed = requestedPayloadBytes <= safeUsableBytes;
 
         return new PngLsbCapacityEstimate(
-            maximumRawEmbeddableBytes: rawEmbeddableBytes,
-            safeUsableBytes: safeUsableBytes,
-            reservedEnvelopeOverheadBytes: reservedEnvelopeOverheadBytes,
-            canEmbedRequestedPayload: canEmbed,
-            constraintDiagnostics: canEmbed
+            MaximumRawEmbeddableBytes: rawEmbeddableBytes,
+            SafeUsableBytes: safeUsableBytes,
+            ReservedEnvelopeOverheadBytes: reservedEnvelopeOverheadBytes,
+            CanEmbedRequestedPayload: canEmbed,
+            ConstraintDiagnostics: canEmbed
                 ? []
                 : BuildConstraintDiagnostics(requestedPayloadBytes, safeUsableBytes, rawEmbeddableBytes, reservedEnvelopeOverheadBytes));
     }
