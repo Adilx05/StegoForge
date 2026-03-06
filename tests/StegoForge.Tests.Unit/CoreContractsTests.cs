@@ -27,6 +27,10 @@ public sealed class CoreContractsTests
         {
             exception = new OutputExistsException("output.png");
         }
+        else if (exceptionType == typeof(InternalProcessingException))
+        {
+            exception = new InternalProcessingException("boom");
+        }
         else
         {
             exception = (Exception)Activator.CreateInstance(exceptionType, "boom")!;
