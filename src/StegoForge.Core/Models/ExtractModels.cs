@@ -14,14 +14,12 @@ public sealed record ExtractRequest
     public string OutputPath { get; }
     public ProcessingOptions ProcessingOptions { get; }
     public PasswordOptions PasswordOptions { get; }
-    public EncryptionOptions EncryptionOptions { get; }
 
     public ExtractRequest(
         string carrierPath,
         string outputPath,
         ProcessingOptions? processingOptions = null,
-        PasswordOptions? passwordOptions = null,
-        EncryptionOptions? encryptionOptions = null)
+        PasswordOptions? passwordOptions = null)
     {
         if (string.IsNullOrWhiteSpace(carrierPath))
         {
@@ -37,7 +35,6 @@ public sealed record ExtractRequest
         OutputPath = outputPath;
         ProcessingOptions = processingOptions ?? ProcessingOptions.Default;
         PasswordOptions = passwordOptions ?? PasswordOptions.Optional;
-        EncryptionOptions = encryptionOptions ?? EncryptionOptions.Default;
     }
 }
 
