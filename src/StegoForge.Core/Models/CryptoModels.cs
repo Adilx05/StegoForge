@@ -67,6 +67,8 @@ public sealed record KdfOptions
 
 public sealed record EncryptionOptions
 {
+    public string KdfAlgorithmId { get; }
+    public EncryptionKeyLengthPolicy KeyLengthPolicy { get; }
     public string EncryptionAlgorithmId { get; }
     public KdfOptions KdfOptions { get; }
 
@@ -74,6 +76,8 @@ public sealed record EncryptionOptions
 
     public EncryptionOptions(
         string encryptionAlgorithmId = "aes-256-gcm",
+        string kdfAlgorithmId = "pbkdf2-sha256",
+        EncryptionKeyLengthPolicy keyLengthPolicy = EncryptionKeyLengthPolicy.ProviderDefault,
         KdfOptions? kdfOptions = null)
     {
         if (string.IsNullOrWhiteSpace(encryptionAlgorithmId))
@@ -81,9 +85,33 @@ public sealed record EncryptionOptions
             throw new ArgumentException("Encryption algorithm identifier is required.", nameof(encryptionAlgorithmId));
         }
 
+        if (string.IsNullOrWhiteSpace(kdfAlgorithmId))
+        {
+            throw new ArgumentException("KDF algorithm identifier is required.", nameof(kdfAlgorithmId));
+        }
+
+        if (!Enum.IsDefined(keyLengthPolicy))
+        {
+            throw new ArgumentOutOfRangeException(nameof(keyLengthPolicy), "Invalid key length policy.");
+        }
+
+        var resolvedKdfOptions = kdfOptions ?? KdfOptions.Default;
+        if (!string.Equals(kdfAlgorithmId, resolvedKdfOptions.AlgorithmId, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException("KDF algorithm identifier must match KDF options algorithm identifier.", nameof(kdfAlgorithmId));
+        }
+
+        KdfAlgorithmId = kdfAlgorithmId;
+        KeyLengthPolicy = keyLengthPolicy;
         EncryptionAlgorithmId = encryptionAlgorithmId;
-        KdfOptions = kdfOptions ?? KdfOptions.Default;
+        KdfOptions = resolvedKdfOptions;
     }
+}
+
+public enum EncryptionKeyLengthPolicy
+{
+    ProviderDefault,
+    Strict
 }
 
 public sealed record CryptoEncryptRequest
