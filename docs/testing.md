@@ -69,6 +69,35 @@ The following tests lock down extraction behavior when compressed envelope paylo
   - Expected mapped error code: `StegoErrorCode.InternalProcessingFailure`
   - Expected CLI exit code: `1`
 
+## Milestone 5 — Crypto wrong-password and tamper matrix
+
+The following test cases are required for Milestone 5 completion. Names are intentionally fixed so roadmap/docs/test reviews can reference them verbatim.
+
+### Wrong-password behavior (must map to `WrongPassword`)
+
+- `ExtractPayload_EncryptedEnvelope_WithWrongPassword_ThrowsWrongPasswordException`
+- `ExtractPayload_EncryptedEnvelope_WithWrongPassword_MapsToStegoErrorCodeWrongPassword`
+- `CliExtract_WithWrongPassword_ReturnsExitCode8`
+- `EmbedThenExtract_WithPasswordFromEnv_AndMismatchedEnvValue_FailsWrongPassword`
+- `EmbedThenExtract_WithPasswordFromFile_AndMismatchedFileContent_FailsWrongPassword`
+
+### Tamper/authentication behavior (must never produce plaintext)
+
+- `ExtractPayload_EncryptedEnvelope_WithTamperedCiphertext_ThrowsWrongPasswordException`
+- `ExtractPayload_EncryptedEnvelope_WithTamperedAuthTag_ThrowsWrongPasswordException`
+- `ExtractPayload_EncryptedEnvelope_WithTamperedNonceMetadata_ThrowsWrongPasswordException`
+- `ExtractPayload_EncryptedEnvelope_WithTamperedSaltMetadata_ThrowsWrongPasswordException`
+- `ExtractPayload_EncryptedEnvelope_WithTamperedCipherAlgorithmId_ThrowsInvalidHeaderException`
+- `CliExtract_WithTamperedCiphertext_ReturnsExitCode8`
+
+### Boundary/contract checks for crypto metadata
+
+- `Deserialize_EncryptedEnvelope_WithMissingCipherAlgorithmId_ThrowsInvalidHeader`
+- `Deserialize_EncryptedEnvelope_WithTagLengthMismatch_ThrowsInvalidPayload`
+- `Deserialize_UnencryptedEnvelope_WithUnexpectedKdfMetadata_ThrowsInvalidHeader`
+
+Each case should assert both typed exception behavior and mapped `StegoErrorCode` (plus CLI exit code where applicable) so failures remain deterministic across application, integration, and CLI layers.
+
 ## Test categories to prioritize
 
 1. **Payload framing correctness**
