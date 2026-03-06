@@ -20,5 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/StegoForge.Infrastructure/StegoForge.Infrastructure.csproj" />
     <ProjectReference Include="../../src/StegoForge.Core/StegoForge.Core.csproj" />
+    <ProjectReference Include="../../src/StegoForge.Application/StegoForge.Application.csproj" />
+    <ProjectReference Include="../../src/StegoForge.Compression/StegoForge.Compression.csproj" />
   </ItemGroup>
 </Project>

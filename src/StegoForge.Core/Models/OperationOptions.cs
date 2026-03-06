@@ -2,9 +2,9 @@ namespace StegoForge.Core.Models;
 
 public enum CompressionMode
 {
-    None,
+    Disabled,
     Automatic,
-    Always
+    Enabled
 }
 
 public enum EncryptionMode
