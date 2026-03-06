@@ -132,24 +132,103 @@ public sealed class CoreContractsTests
     [Fact]
     public void ExtractResponse_ComputesPayloadSize_FromPayloadLength()
     {
-        var response = new ExtractResponse("out.bin", "png-lsb-v1", [1, 2, 3, 4], wasCompressed: true, wasEncrypted: false);
+        var payload = new byte[] { 1, 2, 3, 4 };
+        var response = new ExtractResponse(
+            "out.bin",
+            "./out.bin",
+            "png-lsb-v1",
+            payload,
+            wasCompressed: true,
+            wasEncrypted: false,
+            originalFileName: "payload.txt",
+            preservedOriginalFileName: true,
+            integrityVerificationResult: IntegrityVerificationResult.Verified,
+            warnings: ["trailing bytes ignored"]);
+
+        payload[0] = 9;
 
         Assert.Equal(4, response.PayloadSizeBytes);
+        Assert.Equal(1, response.Payload[0]);
+        Assert.Equal("payload.txt", response.OriginalFileName);
+        Assert.True(response.PreservedOriginalFileName);
+        Assert.Equal(IntegrityVerificationResult.Verified, response.IntegrityVerificationResult);
         Assert.Equal(OperationDiagnostics.Empty, response.Diagnostics);
+    }
+
+    [Fact]
+    public void ExtractResponse_Throws_WhenIntegrityVerificationResultInvalid()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ExtractResponse(
+            "out.bin",
+            "./out.bin",
+            "png-lsb-v1",
+            [1, 2],
+            wasCompressed: false,
+            wasEncrypted: false,
+            integrityVerificationResult: (IntegrityVerificationResult)77));
     }
 
     [Fact]
     public void CapacityResponse_Throws_WhenRequestedPayloadNegative()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new CapacityResponse("png-lsb-v1", -1, 2048, canEmbed: false, remainingBytes: 0));
+            new CapacityResponse("png-lsb-v1", -1, 2048, 4096, 3072, 128, canEmbed: false, remainingBytes: 0, failureReason: "overflow"));
+    }
+
+    [Fact]
+    public void CapacityResponse_RequiresFailureDetails_WhenCannotEmbed()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new CapacityResponse("png-lsb-v1", 1024, 512, 1024, 768, 64, canEmbed: false, remainingBytes: -512));
+    }
+
+    [Fact]
+    public void CapacityResponse_PopulatesConstraintBreakdown_WhenProvided()
+    {
+        var response = new CapacityResponse(
+            "png-lsb-v1",
+            4096,
+            3000,
+            4096,
+            3500,
+            128,
+            canEmbed: false,
+            remainingBytes: -596,
+            failureReason: "Safe capacity exceeded",
+            constraintBreakdown: ["Header overhead: 128 bytes", "Safe limit: 3500 bytes"]);
+
+        Assert.Equal("Safe capacity exceeded", response.FailureReason);
+        Assert.Collection(
+            response.ConstraintBreakdown,
+            item => Assert.Equal("Header overhead: 128 bytes", item),
+            item => Assert.Equal("Safe limit: 3500 bytes", item));
     }
 
     [Fact]
     public void CarrierInfoResponse_DefaultsDiagnostics_WhenNotProvided()
     {
-        var response = new CarrierInfoResponse("png-lsb-v1", 10_000, 4_000, true, true);
+        var details = new CarrierFormatDetails("png-lsb-v1", "PNG LSB", "1.0.0");
+        var metadata = new PayloadMetadataSummary("secret.txt", 1234, DateTimeOffset.Parse("2025-01-01T00:00:00+00:00"), 1);
+        var descriptors = new PayloadProtectionDescriptors("deflate", "aes-gcm-256", "hmac-sha256");
+        var response = new CarrierInfoResponse("png-lsb-v1", details, 10_000, 5_000, 4_000, true, true, true, metadata, descriptors);
 
         Assert.Equal(OperationDiagnostics.Empty, response.Diagnostics);
+        Assert.True(response.EmbeddedDataPresent);
+        Assert.Equal("secret.txt", response.PayloadMetadata?.OriginalFileName);
+        Assert.Equal("aes-gcm-256", response.ProtectionDescriptors.EncryptionDescriptor);
+    }
+
+    [Fact]
+    public void CarrierInfoResponse_Throws_WhenFormatIdentifiersMismatch()
+    {
+        Assert.Throws<ArgumentException>(() => new CarrierInfoResponse(
+            "png-lsb-v1",
+            new CarrierFormatDetails("wav-lsb-v1", "WAV LSB", "1.0.0"),
+            100,
+            50,
+            45,
+            embeddedDataPresent: false,
+            supportsEncryption: true,
+            supportsCompression: true));
     }
 }
