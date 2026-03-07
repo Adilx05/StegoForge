@@ -256,12 +256,14 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
 
     private static BmpCarrierAnalysis AnalyzeCarrier(Stream stream)
     {
-        stream.Position = 0;
-        IImageFormat? format = Image.DetectFormat(stream);
-        if (format is null || !string.Equals(format.Name, BmpFormat.Instance.Name, StringComparison.Ordinal))
+        try
         {
-            return new(default, new UnsupportedFormatException("Carrier must be a BMP file for bmp-lsb-v1."));
-        }
+            stream.Position = 0;
+            IImageFormat? format = Image.DetectFormat(stream);
+            if (format is null || !string.Equals(format.Name, BmpFormat.Instance.Name, StringComparison.Ordinal))
+            {
+                return new(default, new UnsupportedFormatException("Carrier must be a BMP file for bmp-lsb-v1."));
+            }
 
         var headerBuffer = ArrayPool<byte>.Shared.Rent(54);
         try
@@ -312,6 +314,11 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
         finally
         {
             ArrayPool<byte>.Shared.Return(headerBuffer);
+        }
+        }
+        catch (UnknownImageFormatException)
+        {
+            return new(default, new UnsupportedFormatException("Carrier must be a BMP file for bmp-lsb-v1."));
         }
     }
 
