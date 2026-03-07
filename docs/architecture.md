@@ -162,7 +162,7 @@ These rules preserve compatibility and make failure modes explicit when environm
 | Request | Fields | Behavioral guarantees |
 | --- | --- | --- |
 | `EmbedRequest` | `CarrierPath`, `OutputPath`, `Payload`, `ProcessingOptions`, `PasswordOptions` | Required paths and non-empty payload are enforced. Option blocks default to shared defaults when omitted. |
-| `ExtractRequest` | `CarrierPath`, `OutputPath`, `ProcessingOptions`, `PasswordOptions`, `PreserveOriginalFileName` | Required paths are enforced. Option blocks default to shared defaults when omitted. Original-name preservation is explicit and validated against output-target policy. |
+| `ExtractRequest` | `CarrierPath`, `OutputPath`, `ProcessingOptions`, `PasswordOptions` | Required paths are enforced. Option blocks default to shared defaults when omitted. |
 | `CapacityRequest` | `CarrierPath`, `PayloadSizeBytes`, `ProcessingOptions` | Required carrier path and non-negative payload size are enforced. Processing options default when omitted. |
 | `InfoRequest` | `CarrierPath`, `ProcessingOptions` | Required carrier path is enforced. Processing options default when omitted. |
 
@@ -207,7 +207,6 @@ Errors should be expressed via `StegoErrorCode` + message + optional context so 
 | Contradictory mode selection: `CompressionMode.Disabled` with non-zero `CompressionLevel`. | `InvalidArgumentsException` | `InvalidArguments` |
 | Contradictory password/encryption policy (`EncryptionMode.None` + `PasswordRequirement.Required`, or `EncryptionMode.Required` + `PasswordRequirement.Optional`). | `InvalidArgumentsException` | `InvalidArguments` |
 | Output target exists while `OverwriteBehavior.Disallow` is active. | `OutputExistsException` | `OutputAlreadyExists` |
-| Impossible extract target policy: `PreserveOriginalFileName=true` with non-directory explicit output target. | `InvalidArgumentsException` | `InvalidArguments` |
 | Missing carrier input path for any operation. | `FileNotFoundStegoException` | `FileNotFound` |
 
 This keeps CLI and WPF behavior aligned: both surfaces receive the same typed exception + error-code mapping from the application layer without duplicating policy checks in presentation code.

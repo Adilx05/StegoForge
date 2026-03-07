@@ -162,12 +162,6 @@ public sealed class OperationPolicyValidator
 
     private void EnsureExtractOutputPolicy(ExtractRequest request)
     {
-        if (request.PreserveOriginalFileName && !Directory.Exists(request.OutputPath))
-        {
-            throw new InvalidArgumentsException(
-                "PreserveOriginalFileName requires OutputPath to be an existing directory and must not point to an explicit file target.");
-        }
-
         EnsureOutputPolicy(request.OutputPath, request.ProcessingOptions.OverwriteBehavior);
     }
 }

@@ -35,7 +35,7 @@ public sealed class ExtractService(
         var payload = orchestrationService.ExtractPayload(envelope, request.ProcessingOptions, request.PasswordOptions, passphrase);
 
         var warnings = new List<string>();
-        var resolvedOutputPath = ResolveOutputPath(request.OutputPath, request.PreserveOriginalFileName, envelope, warnings);
+        var resolvedOutputPath = ResolveOutputPath(request.OutputPath, envelope, warnings);
         policyGate.EnsureOutputPolicy(resolvedOutputPath, request.ProcessingOptions.OverwriteBehavior);
 
         await File.WriteAllBytesAsync(resolvedOutputPath, payload, cancellationToken).ConfigureAwait(false);
@@ -70,13 +70,8 @@ public sealed class ExtractService(
             diagnostics: diagnostics);
     }
 
-    private static string ResolveOutputPath(string requestedOutputPath, bool preserveOriginalFileName, PayloadEnvelope envelope, List<string> warnings)
+    private static string ResolveOutputPath(string requestedOutputPath, PayloadEnvelope envelope, List<string> warnings)
     {
-        if (!preserveOriginalFileName)
-        {
-            return requestedOutputPath;
-        }
-
         var originalFileName = envelope.Header.OriginalFileName;
         if (string.IsNullOrWhiteSpace(originalFileName))
         {

@@ -89,37 +89,7 @@ public sealed class OperationPolicyValidatorTests
         Assert.Equal(StegoErrorCode.OutputAlreadyExists, exception.Code);
     }
 
-    [Fact]
-    public void ValidateExtractRequest_ThrowsInvalidArguments_WhenPreserveOriginalFileNameWithExplicitFileTarget()
-    {
-        using var fixture = new TempFileFixture();
-        var validator = new OperationPolicyValidator();
 
-        var request = new ExtractRequest(
-            carrierPath: fixture.CarrierPath,
-            outputPath: fixture.OutputPath,
-            processingOptions: new ProcessingOptions(overwriteBehavior: OverwriteBehavior.Allow),
-            preserveOriginalFileName: true);
-
-        var exception = Assert.Throws<InvalidArgumentsException>(() => validator.ValidateExtractRequest(request));
-        Assert.Equal(StegoErrorCode.InvalidArguments, exception.Code);
-        Assert.Contains("PreserveOriginalFileName requires OutputPath to be an existing directory", exception.Message);
-    }
-
-    [Fact]
-    public void ValidateExtractRequest_AllowsPreserveOriginalFileNameWhenOutputTargetIsDirectory()
-    {
-        using var fixture = new TempFileFixture();
-        var validator = new OperationPolicyValidator();
-
-        var request = new ExtractRequest(
-            carrierPath: fixture.CarrierPath,
-            outputPath: fixture.RootPath,
-            processingOptions: new ProcessingOptions(overwriteBehavior: OverwriteBehavior.Allow),
-            preserveOriginalFileName: true);
-
-        validator.ValidateExtractRequest(request);
-    }
 
     private sealed class TempFileFixture : IDisposable
     {

@@ -136,15 +136,6 @@ public sealed class CoreContractsTests
         Assert.Throws<ArgumentException>(() => new ExtractRequest("carrier.png", " "));
     }
 
-
-    [Fact]
-    public void ExtractRequest_DefaultsPreserveOriginalFileNameToFalse()
-    {
-        var request = new ExtractRequest("carrier.png", "out.bin");
-
-        Assert.False(request.PreserveOriginalFileName);
-    }
-
     [Fact]
     public void CapacityRequest_Throws_WhenPayloadSizeNegative()
     {

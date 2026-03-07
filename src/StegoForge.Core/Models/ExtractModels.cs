@@ -14,14 +14,12 @@ public sealed record ExtractRequest
     public string OutputPath { get; }
     public ProcessingOptions ProcessingOptions { get; }
     public PasswordOptions PasswordOptions { get; }
-    public bool PreserveOriginalFileName { get; }
 
     public ExtractRequest(
         string carrierPath,
         string outputPath,
         ProcessingOptions? processingOptions = null,
-        PasswordOptions? passwordOptions = null,
-        bool preserveOriginalFileName = false)
+        PasswordOptions? passwordOptions = null)
     {
         if (string.IsNullOrWhiteSpace(carrierPath))
         {
@@ -37,7 +35,6 @@ public sealed record ExtractRequest
         OutputPath = outputPath;
         ProcessingOptions = processingOptions ?? ProcessingOptions.Default;
         PasswordOptions = passwordOptions ?? PasswordOptions.Optional;
-        PreserveOriginalFileName = preserveOriginalFileName;
     }
 }
 
