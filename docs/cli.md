@@ -96,6 +96,25 @@ stegoforge capacity --carrier in.wav
   - Mono or stereo channel layouts only.
 - Non-PCM, unsupported bit depths, and malformed/missing required chunks are rejected deterministically as unsupported-format or invalid-header failures.
 
+## Validation consistency and deterministic shared-service errors
+
+CLI command validation is expected to be behaviorally consistent with other front-ends because requests are executed through shared application services (`EmbedService`, `ExtractService`, `CapacityService`, `InfoService`) and a shared policy gate (`OperationPolicyValidator`).
+
+User-facing guarantees:
+
+- Invalid option/policy combinations fail fast with deterministic `InvalidArguments` semantics rather than partially processing carrier files.
+- Overwrite disallow behavior is deterministic (`OutputAlreadyExists`) across commands.
+- Handler selection/format mismatch failures are deterministic (`UnsupportedFormat`) due to shared resolver precedence rules.
+- Authentication, payload/header corruption, and capacity failures map to stable `StegoErrorCode` + exit-code outcomes documented above.
+
+This alignment is regression-covered by orchestration/policy tests in:
+
+- `tests/StegoForge.Tests.Integration/ApplicationServiceOrchestrationIntegrationTests.cs`
+- `tests/StegoForge.Tests.Integration/OrchestrationConsistencyIntegrationTests.cs`
+- `tests/StegoForge.Tests.Unit/Application/OperationPolicyValidatorTests.cs`
+- `tests/StegoForge.Tests.Unit/Application/CarrierFormatResolverTests.cs`
+
+
 ## Current status
 
 - Baseline CLI project is present with placeholder entry point.
