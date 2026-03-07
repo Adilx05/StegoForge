@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 using StegoForge.Cli;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Errors;
@@ -17,10 +18,11 @@ public sealed class CommandPipelineExitCodeTests
         var output = Path.Combine(Path.GetTempPath(), $"embed-out-{Guid.NewGuid():N}.png");
         var services = BuildServices(new FakeEmbedService(_ => Task.FromResult(new EmbedResponse(output, "png-lsb-v1", 7, 7))));
 
-        var result = await RunWithCapturedStderrAsync(["embed", "--carrier", carrier, "--payload", payload, "--out", output], services);
+        var result = await RunWithCapturedOutputAsync(["embed", "--carrier", carrier, "--payload", payload, "--out", output], services);
 
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(string.Empty, result.Stderr);
+        Assert.Contains("Command: embed", result.Stdout, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -31,7 +33,7 @@ public sealed class CommandPipelineExitCodeTests
         var output = Path.Combine(Path.GetTempPath(), $"embed-out-{Guid.NewGuid():N}.png");
         var services = BuildServices(new FakeEmbedService(_ => Task.FromException<EmbedResponse>(new WrongPasswordException("Unable to decrypt."))));
 
-        var result = await RunWithCapturedStderrAsync(["embed", "--carrier", carrier, "--payload", payload, "--out", output], services);
+        var result = await RunWithCapturedOutputAsync(["embed", "--carrier", carrier, "--payload", payload, "--out", output], services);
 
         Assert.Equal(8, result.ExitCode);
         Assert.StartsWith("ERROR [WrongPassword]", result.Stderr, StringComparison.Ordinal);
@@ -44,7 +46,7 @@ public sealed class CommandPipelineExitCodeTests
         var output = Path.Combine(Path.GetTempPath(), $"extract-out-{Guid.NewGuid():N}.bin");
         var services = BuildServices(extractService: new FakeExtractService(_ => Task.FromResult(new ExtractResponse(output, output, "png-lsb-v1", [1], false, false))));
 
-        var result = await RunWithCapturedStderrAsync(["extract", "--carrier", carrier, "--out", output], services);
+        var result = await RunWithCapturedOutputAsync(["extract", "--carrier", carrier, "--out", output], services);
 
         Assert.Equal(0, result.ExitCode);
     }
@@ -56,7 +58,7 @@ public sealed class CommandPipelineExitCodeTests
         var output = Path.Combine(Path.GetTempPath(), $"extract-out-{Guid.NewGuid():N}.bin");
         var services = BuildServices(extractService: new FakeExtractService(_ => Task.FromException<ExtractResponse>(new InvalidPayloadException("Invalid envelope."))));
 
-        var result = await RunWithCapturedStderrAsync(["extract", "--carrier", carrier, "--out", output], services);
+        var result = await RunWithCapturedOutputAsync(["extract", "--carrier", carrier, "--out", output], services);
 
         Assert.Equal(6, result.ExitCode);
         Assert.StartsWith("ERROR [InvalidPayload]", result.Stderr, StringComparison.Ordinal);
@@ -68,7 +70,7 @@ public sealed class CommandPipelineExitCodeTests
         var carrier = CreateTempFile();
         var services = BuildServices(capacityService: new FakeCapacityService(_ => Task.FromResult(new CapacityResponse("png-lsb-v1", 10, 100, 100, 90, 2, true, 90))));
 
-        var result = await RunWithCapturedStderrAsync(["capacity", "--carrier", carrier, "--payload", "10"], services);
+        var result = await RunWithCapturedOutputAsync(["capacity", "--carrier", carrier, "--payload", "10"], services);
 
         Assert.Equal(0, result.ExitCode);
     }
@@ -79,7 +81,7 @@ public sealed class CommandPipelineExitCodeTests
         var carrier = CreateTempFile();
         var services = BuildServices(capacityService: new FakeCapacityService(_ => Task.FromException<CapacityResponse>(new InsufficientCapacityException(100, 10))));
 
-        var result = await RunWithCapturedStderrAsync(["capacity", "--carrier", carrier, "--payload", "100"], services);
+        var result = await RunWithCapturedOutputAsync(["capacity", "--carrier", carrier, "--payload", "100"], services);
 
         Assert.Equal(9, result.ExitCode);
         Assert.StartsWith("ERROR [InsufficientCapacity]", result.Stderr, StringComparison.Ordinal);
@@ -100,7 +102,7 @@ public sealed class CommandPipelineExitCodeTests
             supportsCompression: true);
         var services = BuildServices(infoService: new FakeInfoService(_ => Task.FromResult(response)));
 
-        var result = await RunWithCapturedStderrAsync(["info", "--carrier", carrier], services);
+        var result = await RunWithCapturedOutputAsync(["info", "--carrier", carrier], services);
 
         Assert.Equal(0, result.ExitCode);
     }
@@ -111,7 +113,7 @@ public sealed class CommandPipelineExitCodeTests
         var carrier = CreateTempFile();
         var services = BuildServices(infoService: new FakeInfoService(_ => Task.FromException<CarrierInfoResponse>(new UnsupportedFormatException("Unsupported."))));
 
-        var result = await RunWithCapturedStderrAsync(["info", "--carrier", carrier], services);
+        var result = await RunWithCapturedOutputAsync(["info", "--carrier", carrier], services);
 
         Assert.Equal(5, result.ExitCode);
         Assert.StartsWith("ERROR [UnsupportedFormat]", result.Stderr, StringComparison.Ordinal);
@@ -120,9 +122,72 @@ public sealed class CommandPipelineExitCodeTests
     [Fact]
     public async Task VersionCommand_ReturnsZeroOnSuccess()
     {
-        var result = await RunWithCapturedStderrAsync(["version"], BuildServices());
+        var result = await RunWithCapturedOutputAsync(["version"], BuildServices());
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(string.Empty, result.Stderr);
+    }
+
+    [Fact]
+    public async Task InfoCommand_JsonSuccess_EmitsStableContractFields()
+    {
+        var carrier = CreateTempFile();
+        var response = new CarrierInfoResponse(
+            "png-lsb-v1",
+            new CarrierFormatDetails("png-lsb-v1", "PNG LSB", "1.0"),
+            100,
+            50,
+            40,
+            embeddedDataPresent: true,
+            supportsEncryption: true,
+            supportsCompression: true);
+        var services = BuildServices(infoService: new FakeInfoService(_ => Task.FromResult(response)));
+
+        var result = await RunWithCapturedOutputAsync(["info", "--carrier", carrier, "--json"], services);
+
+        Assert.Equal(0, result.ExitCode);
+        using var document = JsonDocument.Parse(result.Stdout);
+        var root = document.RootElement;
+        Assert.Equal("info", root.GetProperty("command").GetString());
+        Assert.Equal("png-lsb-v1", root.GetProperty("formatId").GetString());
+        Assert.Equal(40, root.GetProperty("availableCapacityBytes").GetInt64());
+    }
+
+    [Fact]
+    public async Task CapacityCommand_JsonFailure_EmitsStableErrorShapeAndExitCode()
+    {
+        var carrier = CreateTempFile();
+        var services = BuildServices(capacityService: new FakeCapacityService(_ => Task.FromException<CapacityResponse>(new InsufficientCapacityException(100, 10))));
+
+        var result = await RunWithCapturedOutputAsync(["capacity", "--carrier", carrier, "--payload", "100", "--json"], services);
+
+        Assert.Equal(9, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stdout);
+        using var document = JsonDocument.Parse(result.Stderr);
+        var root = document.RootElement;
+        Assert.Equal("error", root.GetProperty("type").GetString());
+        Assert.Equal(9, root.GetProperty("exitCode").GetInt32());
+        Assert.Equal("InsufficientCapacity", root.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task InfoCommand_HumanReadableSuccess_EmitsSummary()
+    {
+        var carrier = CreateTempFile();
+        var response = new CarrierInfoResponse(
+            "png-lsb-v1",
+            new CarrierFormatDetails("png-lsb-v1", "PNG LSB", "1.0"),
+            100,
+            50,
+            50,
+            embeddedDataPresent: false,
+            supportsEncryption: true,
+            supportsCompression: true);
+        var services = BuildServices(infoService: new FakeInfoService(_ => Task.FromResult(response)));
+
+        var result = await RunWithCapturedOutputAsync(["info", "--carrier", carrier], services);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Format ID: png-lsb-v1", result.Stdout, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -165,6 +230,32 @@ public sealed class CommandPipelineExitCodeTests
         Assert.Contains("does not exist", stderr, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task ParserError_WithJsonFlag_EmitsJsonErrorShape()
+    {
+        var errorWriter = new StringWriter();
+        var outputWriter = new StringWriter();
+        var originalOut = Console.Out;
+        Console.SetOut(outputWriter);
+        try
+        {
+            var exitCode = await CliApplication.RunAsync(["embed", "--json"], BuildServices(), errorWriter);
+
+            Assert.Equal(3, exitCode);
+            Assert.Equal(string.Empty, outputWriter.ToString());
+
+            using var document = JsonDocument.Parse(errorWriter.ToString());
+            var root = document.RootElement;
+            Assert.Equal("error", root.GetProperty("type").GetString());
+            Assert.Equal(3, root.GetProperty("exitCode").GetInt32());
+            Assert.Equal("InvalidArguments", root.GetProperty("code").GetString());
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+    }
+
     private static string CreateTempFile(string contents = "carrier")
     {
         var path = Path.GetTempFileName();
@@ -172,19 +263,23 @@ public sealed class CommandPipelineExitCodeTests
         return path;
     }
 
-    private static async Task<(int ExitCode, string Stderr)> RunWithCapturedStderrAsync(string[] args, ServiceProvider services)
+    private static async Task<(int ExitCode, string Stdout, string Stderr)> RunWithCapturedOutputAsync(string[] args, ServiceProvider services)
     {
-        var writer = new StringWriter();
-        var original = Console.Error;
-        Console.SetError(writer);
+        var stdoutWriter = new StringWriter();
+        var stderrWriter = new StringWriter();
+        var originalOut = Console.Out;
+        var originalErr = Console.Error;
+        Console.SetOut(stdoutWriter);
+        Console.SetError(stderrWriter);
         try
         {
             var exitCode = await CliApplication.RunAsync(args, services);
-            return (exitCode, writer.ToString());
+            return (exitCode, stdoutWriter.ToString(), stderrWriter.ToString());
         }
         finally
         {
-            Console.SetError(original);
+            Console.SetOut(originalOut);
+            Console.SetError(originalErr);
         }
     }
 

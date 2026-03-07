@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Reflection;
+using StegoForge.Cli.Output;
 
 namespace StegoForge.Cli.Commands;
 
@@ -18,14 +19,12 @@ public sealed class VersionCommand
             return await CommandExecution.ExecuteAsync(_ =>
             {
                 var assembly = Assembly.GetExecutingAssembly().GetName();
-                var payload = new
-                {
-                    command = "version",
-                    name = assembly.Name,
-                    version = assembly.Version?.ToString() ?? "unknown"
-                };
+                var payload = new VersionCommandOutput(
+                    Command: "version",
+                    Name: assembly.Name ?? "StegoForge.Cli",
+                    Version: assembly.Version?.ToString() ?? "unknown");
 
-                return Task.FromResult<object>(payload);
+                return Task.FromResult<ICommandOutput>(payload);
             }, json).ConfigureAwait(false);
         });
 

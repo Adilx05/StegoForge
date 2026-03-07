@@ -1,4 +1,5 @@
 using System.CommandLine;
+using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 
@@ -48,20 +49,18 @@ public sealed class ExtractCommand(IExtractService extractService)
                     passwordOptions: CommandExecution.BuildPasswordOptions(password));
 
                 var response = await extractService.ExtractAsync(request, cancellationToken).ConfigureAwait(false);
-                return new
-                {
-                    command = "extract",
-                    response.OutputPath,
-                    response.ResolvedOutputPath,
-                    response.CarrierFormatId,
-                    response.PayloadSizeBytes,
-                    response.WasCompressed,
-                    response.WasEncrypted,
-                    response.OriginalFileName,
-                    response.IntegrityVerificationResult,
-                    response.Warnings,
-                    response.Diagnostics
-                };
+                return (ICommandOutput)new ExtractCommandOutput(
+                    Command: "extract",
+                    OutputPath: response.OutputPath,
+                    ResolvedOutputPath: response.ResolvedOutputPath,
+                    CarrierFormatId: response.CarrierFormatId,
+                    PayloadSizeBytes: response.PayloadSizeBytes,
+                    WasCompressed: response.WasCompressed,
+                    WasEncrypted: response.WasEncrypted,
+                    OriginalFileName: response.OriginalFileName,
+                    IntegrityVerificationResult: response.IntegrityVerificationResult,
+                    Warnings: response.Warnings,
+                    Diagnostics: response.Diagnostics);
             }, json).ConfigureAwait(false);
         });
 

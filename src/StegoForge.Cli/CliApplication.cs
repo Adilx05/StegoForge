@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using StegoForge.Cli.Commands;
+using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Errors;
 
@@ -45,10 +46,18 @@ public static class CliApplication
         {
             var parserMessage = string.Join(" ", parseResult.Errors.Select(static error => error.Message));
             var parserError = StegoError.InvalidArguments(parserMessage);
-            await (errorWriter ?? Console.Error).WriteLineAsync(CliErrorContract.FormatError(parserError)).ConfigureAwait(false);
-            return CliErrorContract.GetExitCode(parserError.Code);
+            var exitCode = CliErrorContract.GetExitCode(parserError.Code);
+            var formatter = HasJsonFlag(args)
+                ? (IOutputFormatter)new JsonOutputFormatter(Console.Out, errorWriter ?? Console.Error)
+                : new TextOutputFormatter(Console.Out, errorWriter ?? Console.Error);
+
+            await formatter.WriteFailureAsync(new CliCommandFailure(exitCode, parserError)).ConfigureAwait(false);
+            return exitCode;
         }
 
         return await parseResult.InvokeAsync().ConfigureAwait(false);
     }
+
+    private static bool HasJsonFlag(string[] args)
+        => args.Any(static arg => string.Equals(arg, "--json", StringComparison.OrdinalIgnoreCase));
 }
