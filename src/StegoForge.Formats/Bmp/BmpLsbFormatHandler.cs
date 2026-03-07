@@ -282,12 +282,24 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
             var bitsPerPixelValue = BinaryPrimitives.ReadUInt16LittleEndian(headerBuffer.AsSpan(28, 2));
             var compression = BinaryPrimitives.ReadUInt32LittleEndian(headerBuffer.AsSpan(30, 4));
 
-            if (width <= 0 || heightRaw == 0 || compression != 0)
+            if (width <= 0 || heightRaw == 0)
             {
                 return false;
             }
 
             if (bitsPerPixelValue is not (24 or 32))
+            {
+                return false;
+            }
+
+            var isSupportedCompression = bitsPerPixelValue switch
+            {
+                24 => compression == 0,
+                32 => compression is 0 or 3,
+                _ => false
+            };
+
+            if (!isSupportedCompression)
             {
                 return false;
             }
