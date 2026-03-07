@@ -5,7 +5,7 @@ using StegoForge.Application.Capacity;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 using StegoForge.Application.Formats;
-using StegoForge.Application.Policies;
+using StegoForge.Application.Validation;
 using StegoForge.Formats.Png;
 using Xunit;
 
@@ -13,7 +13,7 @@ namespace StegoForge.Tests.Integration;
 
 public sealed class CapacityServiceIntegrationTests
 {
-    private readonly ICapacityService _service = new CapacityService(new CarrierFormatResolver([new PngLsbFormatHandler()]), new OperationPolicyGate());
+    private readonly ICapacityService _service = new CapacityService(new CarrierFormatResolver([new PngLsbFormatHandler()]), new OperationPolicyValidator());
 
     [Fact]
     public async Task GetCapacityAsync_PngCarrier_ReturnsExpectedFormatAndCanEmbedDecisions()

@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using StegoForge.Application.Formats;
 using StegoForge.Application.Payload;
-using StegoForge.Application.Policies;
+using StegoForge.Application.Validation;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 using StegoForge.Core.Payload;
@@ -12,7 +12,7 @@ public sealed class ExtractService(
     CarrierFormatResolver formatResolver,
     PayloadOrchestrationService orchestrationService,
     IPayloadEnvelopeSerializer envelopeSerializer,
-    OperationPolicyGate policyGate) : IExtractService
+    OperationPolicyValidator policyGate) : IExtractService
 {
     private const string ProviderId = "stegoforge.application.extract-service";
 

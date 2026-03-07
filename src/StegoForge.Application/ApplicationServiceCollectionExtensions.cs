@@ -6,7 +6,7 @@ using StegoForge.Application.Extract;
 using StegoForge.Application.Formats;
 using StegoForge.Application.Info;
 using StegoForge.Application.Payload;
-using StegoForge.Application.Policies;
+using StegoForge.Application.Validation;
 using StegoForge.Compression.Deflate;
 using StegoForge.Core.Abstractions;
 using StegoForge.Crypto.AesGcm;
@@ -26,7 +26,7 @@ public static class ApplicationServiceCollectionExtensions
         services.TryAddSingleton<ICryptoProvider, AesGcmCryptoProvider>();
 
         services.TryAddSingleton<CarrierFormatResolver>();
-        services.TryAddSingleton<OperationPolicyGate>();
+        services.TryAddSingleton<OperationPolicyValidator>();
         services.TryAddSingleton<PayloadOrchestrationService>();
         services.TryAddSingleton<IPayloadEnvelopeSerializer, PayloadEnvelopeSerializer>();
 

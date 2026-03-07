@@ -1,12 +1,12 @@
 using StegoForge.Application.Formats;
-using StegoForge.Application.Policies;
+using StegoForge.Application.Validation;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 using StegoForge.Formats.Bmp;
 
 namespace StegoForge.Application.Capacity;
 
-public sealed class CapacityService(CarrierFormatResolver formatResolver, OperationPolicyGate policyGate) : ICapacityService
+public sealed class CapacityService(CarrierFormatResolver formatResolver, OperationPolicyValidator policyGate) : ICapacityService
 {
     private const string ProviderId = "stegoforge.application.capacity-service";
     private static readonly BmpLsbCapacityCalculator CapacityCalculator = new();

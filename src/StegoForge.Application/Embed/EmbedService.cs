@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using StegoForge.Application.Formats;
 using StegoForge.Application.Payload;
-using StegoForge.Application.Policies;
+using StegoForge.Application.Validation;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 
@@ -11,7 +11,7 @@ public sealed class EmbedService(
     CarrierFormatResolver formatResolver,
     PayloadOrchestrationService orchestrationService,
     IPayloadEnvelopeSerializer envelopeSerializer,
-    OperationPolicyGate policyGate) : IEmbedService
+    OperationPolicyValidator policyGate) : IEmbedService
 {
     private const string ProviderId = "stegoforge.application.embed-service";
 

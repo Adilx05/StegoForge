@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using StegoForge.Application.Formats;
-using StegoForge.Application.Policies;
+using StegoForge.Application.Validation;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
@@ -10,7 +10,7 @@ namespace StegoForge.Application.Info;
 public sealed class InfoService(
     CarrierFormatResolver formatResolver,
     IPayloadEnvelopeSerializer envelopeSerializer,
-    OperationPolicyGate policyGate) : IInfoService
+    OperationPolicyValidator policyGate) : IInfoService
 {
     private const string ProviderId = "stegoforge.application.info-service";
 
