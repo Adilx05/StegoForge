@@ -1,4 +1,5 @@
 using System.CommandLine;
+using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 
@@ -40,21 +41,19 @@ public sealed class InfoCommand(IInfoService infoService)
                     processingOptions: CommandExecution.BuildProcessingOptions(compress, encrypt, quiet, verbose));
 
                 var response = await infoService.GetInfoAsync(request, cancellationToken).ConfigureAwait(false);
-                return new
-                {
-                    command = "info",
-                    response.FormatId,
-                    response.FormatDetails,
-                    response.CarrierSizeBytes,
-                    response.EstimatedCapacityBytes,
-                    response.AvailableCapacityBytes,
-                    response.EmbeddedDataPresent,
-                    response.SupportsEncryption,
-                    response.SupportsCompression,
-                    response.PayloadMetadata,
-                    response.ProtectionDescriptors,
-                    response.Diagnostics
-                };
+                return (ICommandOutput)new InfoCommandOutput(
+                    Command: "info",
+                    FormatId: response.FormatId,
+                    FormatDetails: response.FormatDetails,
+                    CarrierSizeBytes: response.CarrierSizeBytes,
+                    EstimatedCapacityBytes: response.EstimatedCapacityBytes,
+                    AvailableCapacityBytes: response.AvailableCapacityBytes,
+                    EmbeddedDataPresent: response.EmbeddedDataPresent,
+                    SupportsEncryption: response.SupportsEncryption,
+                    SupportsCompression: response.SupportsCompression,
+                    PayloadMetadata: response.PayloadMetadata,
+                    ProtectionDescriptors: response.ProtectionDescriptors,
+                    Diagnostics: response.Diagnostics);
             }, json).ConfigureAwait(false);
         });
 

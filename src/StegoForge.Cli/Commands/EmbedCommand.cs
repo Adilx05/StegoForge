@@ -1,4 +1,5 @@
 using System.CommandLine;
+using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 
@@ -53,15 +54,13 @@ public sealed class EmbedCommand(IEmbedService embedService)
                     passwordOptions: CommandExecution.BuildPasswordOptions(password));
 
                 var response = await embedService.EmbedAsync(request, cancellationToken).ConfigureAwait(false);
-                return new
-                {
-                    command = "embed",
-                    response.OutputPath,
-                    response.CarrierFormatId,
-                    response.PayloadSizeBytes,
-                    response.BytesEmbedded,
-                    response.Diagnostics
-                };
+                return (ICommandOutput)new EmbedCommandOutput(
+                    Command: "embed",
+                    OutputPath: response.OutputPath,
+                    CarrierFormatId: response.CarrierFormatId,
+                    PayloadSizeBytes: response.PayloadSizeBytes,
+                    BytesEmbedded: response.BytesEmbedded,
+                    Diagnostics: response.Diagnostics);
             }, json).ConfigureAwait(false);
         });
 

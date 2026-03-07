@@ -1,4 +1,5 @@
 using System.CommandLine;
+using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 
 namespace StegoForge.Cli.Commands;
@@ -48,21 +49,19 @@ public sealed class CapacityCommand(ICapacityService capacityService)
                     processingOptions: CommandExecution.BuildProcessingOptions(compress, encrypt, quiet, verbose));
 
                 var response = await capacityService.GetCapacityAsync(request, cancellationToken).ConfigureAwait(false);
-                return new
-                {
-                    command = "capacity",
-                    response.CarrierFormatId,
-                    response.RequestedPayloadSizeBytes,
-                    response.AvailableCapacityBytes,
-                    response.MaximumCapacityBytes,
-                    response.SafeUsableCapacityBytes,
-                    response.EstimatedOverheadBytes,
-                    response.CanEmbed,
-                    response.RemainingBytes,
-                    response.FailureReason,
-                    response.ConstraintBreakdown,
-                    response.Diagnostics
-                };
+                return (ICommandOutput)new CapacityCommandOutput(
+                    Command: "capacity",
+                    CarrierFormatId: response.CarrierFormatId,
+                    RequestedPayloadSizeBytes: response.RequestedPayloadSizeBytes,
+                    AvailableCapacityBytes: response.AvailableCapacityBytes,
+                    MaximumCapacityBytes: response.MaximumCapacityBytes,
+                    SafeUsableCapacityBytes: response.SafeUsableCapacityBytes,
+                    EstimatedOverheadBytes: response.EstimatedOverheadBytes,
+                    CanEmbed: response.CanEmbed,
+                    RemainingBytes: response.RemainingBytes,
+                    FailureReason: response.FailureReason,
+                    ConstraintBreakdown: response.ConstraintBreakdown,
+                    Diagnostics: response.Diagnostics);
             }, json).ConfigureAwait(false);
         });
 

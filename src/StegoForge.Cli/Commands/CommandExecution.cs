@@ -1,43 +1,51 @@
-using System.Text.Json;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
+using StegoForge.Cli.Output;
 
 namespace StegoForge.Cli.Commands;
 
 internal static class CommandExecution
 {
-    public static async Task<int> ExecuteAsync(Func<CancellationToken, Task<object>> action, bool json, CancellationToken cancellationToken = default)
+    public static async Task<int> ExecuteAsync(Func<CancellationToken, Task<ICommandOutput>> action, bool json, CancellationToken cancellationToken = default)
     {
+        var formatter = CreateOutputFormatter(json);
+
         try
         {
             var result = await action(cancellationToken).ConfigureAwait(false);
 
-            if (json)
-            {
-                await Console.Out.WriteLineAsync(JsonSerializer.Serialize(result, JsonOptions)).ConfigureAwait(false);
-            }
+            await formatter.WriteSuccessAsync(result, cancellationToken).ConfigureAwait(false);
 
             return 0;
         }
         catch (ArgumentException exception)
         {
-            var failure = CliErrorContract.CreateInvalidArgumentsFailure(exception.Message);
-            await Console.Error.WriteLineAsync(failure.Message).ConfigureAwait(false);
-            return failure.ExitCode;
+            var error = StegoError.InvalidArguments(exception.Message);
+            return await WriteFailureAsync(formatter, error, cancellationToken).ConfigureAwait(false);
         }
         catch (StegoForgeException exception)
         {
-            var failure = CliErrorContract.CreateFailureFromException(exception);
-            await Console.Error.WriteLineAsync(failure.Message).ConfigureAwait(false);
-            return failure.ExitCode;
+            var error = StegoErrorMapper.FromException(exception);
+            return await WriteFailureAsync(formatter, error, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
-            var failure = CliErrorContract.CreateUnexpectedFailure();
-            await Console.Error.WriteLineAsync(failure.Message).ConfigureAwait(false);
-            return failure.ExitCode;
+            var error = StegoError.InternalProcessingFailure("An internal processing failure occurred. Retry with verbose diagnostics or contact support.");
+            return await WriteFailureAsync(formatter, error, cancellationToken).ConfigureAwait(false);
         }
     }
+
+    private static async Task<int> WriteFailureAsync(IOutputFormatter formatter, StegoError error, CancellationToken cancellationToken)
+    {
+        var failure = new CliCommandFailure(CliErrorContract.GetExitCode(error.Code), error);
+        await formatter.WriteFailureAsync(failure, cancellationToken).ConfigureAwait(false);
+        return failure.ExitCode;
+    }
+
+    private static IOutputFormatter CreateOutputFormatter(bool json)
+        => json
+            ? new JsonOutputFormatter(Console.Out, Console.Error)
+            : new TextOutputFormatter(Console.Out, Console.Error);
 
     public static ProcessingOptions BuildProcessingOptions(string compress, string encrypt, bool quiet, bool verbose)
     {
@@ -86,9 +94,4 @@ internal static class CommandExecution
     private static VerbosityMode ResolveVerbosity(bool quiet, bool verbose)
         => quiet ? VerbosityMode.Quiet : verbose ? VerbosityMode.Detailed : VerbosityMode.Normal;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
 }
