@@ -164,11 +164,29 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Ship user-facing CLI commands for embed/extract/capacity/info.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- CLI supports discoverable help and examples.
-- Exit codes are deterministic and test-covered.
-- Structured/log-friendly output mode exists for automation.
+- [x] CLI help and command discovery remain stable through `src/StegoForge.Cli/CliApplication.cs` and command builders in `src/StegoForge.Cli/Commands/`:
+  - `HelpFlag_IsDiscoverable_AndPrintsCommandCatalog`
+  - `HelpCommand_IsDiscoverable`
+  - `Version_Command_IsDiscoverable`
+  - file: `tests/StegoForge.Tests.Cli/CliCommandIntegrationTests.cs`.
+- [x] Command pipeline exit-code determinism is locked by tests exercising success and mapped failures in `src/StegoForge.Cli/CommandExecution.cs` and `src/StegoForge.Cli/CliErrorContract.cs`:
+  - `EmbedCommand_ReturnsMappedFailureCodeAndStableStderrFormat`
+  - `ExtractCommand_ReturnsMappedFailureCode`
+  - `CapacityCommand_ReturnsMappedFailureCode`
+  - `InfoCommand_ReturnsMappedFailureCode`
+  - parser failure mappings:
+    - `ParserError_MissingRequiredOptions_ReturnsInvalidArgumentsCodeAndStableMessageShape`
+    - `ParserError_InvalidEnumValue_ReturnsInvalidArgumentsCodeAndStableMessageShape`
+    - `ParserError_InvalidFileArgument_ReturnsInvalidArgumentsCodeAndStableMessageShape`
+  - file: `tests/StegoForge.Tests.Cli/CommandPipelineExitCodeTests.cs`.
+- [x] JSON output contract behavior is stable for both success and failure paths via `src/StegoForge.Cli/Output/` and error serialization in `src/StegoForge.Cli/CommandExecution.cs`:
+  - `InfoCommand_JsonSuccess_EmitsStableContractFields`
+  - `CapacityCommand_JsonFailure_EmitsStableErrorShapeAndExitCode`
+  - `ParserError_WithJsonFlag_EmitsJsonErrorShape`
+  - `Info_ReportsMetadataPresenceAndAbsence_AsJson`
+  - file: `tests/StegoForge.Tests.Cli/CommandPipelineExitCodeTests.cs`, `tests/StegoForge.Tests.Cli/CliCommandIntegrationTests.cs`.
 
 ## Milestone 11 — WPF GUI v1
 
