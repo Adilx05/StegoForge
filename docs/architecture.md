@@ -228,6 +228,20 @@ Errors should be expressed via `StegoErrorCode` + message + optional context so 
 
 This keeps CLI and WPF behavior aligned: both surfaces receive the same typed exception + error-code mapping from the application layer without duplicating policy checks in presentation code.
 
+## GUI architecture note (MVVM + shared-service reuse guarantees)
+
+The WPF GUI (`src/StegoForge.Wpf`) follows strict MVVM boundaries:
+
+- Views (`Views/*.xaml`) are limited to bindings and UI event wiring.
+- View models (`ViewModels/*.cs`) coordinate command flow, transient UI state, and validation triggers.
+- Business/domain logic remains in shared application services (`IEmbedService`, `IExtractService`, `ICapacityService`, `IInfoService`) and shared policy/error components.
+
+Shared-service reuse guarantees for the GUI:
+
+- GUI embed/extract/capacity/info operations must call the same application service interfaces used by CLI.
+- GUI validation policy must compose with shared policy validators (not replace them with GUI-only business rules).
+- GUI error handling must use shared `StegoErrorMapper`/`StegoErrorCode` semantics so result categories remain deterministic across interfaces.
+
 ## Extensibility points
 
 - Add a new format by implementing `ICarrierFormatHandler`.

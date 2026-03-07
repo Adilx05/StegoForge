@@ -2,52 +2,119 @@
 
 The WPF app (`src/StegoForge.Wpf`) is the desktop user interface for StegoForge.
 
-## Planned capabilities
+## Finalized v1 UX behavior
 
-- Guided embed workflow:
-  - Select carrier file
-  - Select payload file/text
-  - Configure compression/encryption options
-  - Choose output path and run
-- Guided extract workflow:
-  - Select encoded carrier
-  - Provide key/passphrase (if required)
-  - Choose destination path
-- Capacity and info views for quick validation before embedding.
+### Embed form
 
-## UX principles
+Fields and controls in `EmbedView`/`EmbedViewModel`:
 
-- Clear defaults with explicit advanced settings.
-- Deterministic, human-readable error feedback.
-- No silent fallback behavior for security-sensitive options.
-- Progress indication for long-running operations.
+- **Carrier file** (`CarrierPath`) with Browse + drag/drop support.
+- **Payload file** (`PayloadPath`) with Browse + drag/drop support.
+- **Output file** (`OutputPath`) with Browse + drag/drop support.
+- **Password** (`Password`) text input.
+- **Require encryption** (`RequireEncryption`) checkbox.
+- **Allow overwrite existing output** (`AllowOverwrite`) checkbox.
+- Actions: **Check capacity**, **Get carrier info**, **Embed**.
+- Read-only operation output pane bound to `ResultMessage`.
 
-## Architectural guidance
+Implementation references:
 
-- Prefer MVVM boundaries for maintainability and testability.
-- Keep business logic in application/core services, not code-behind.
-- Surface domain error codes as actionable UI messages.
+- `src/StegoForge.Wpf/Views/EmbedView.xaml`
+- `src/StegoForge.Wpf/ViewModels/EmbedViewModel.cs`
 
-## Validation consistency and deterministic shared-service errors
+### Extract form
 
-GUI validation and error messaging should remain consistent with CLI outcomes by routing operations through the same application services/policy components instead of UI-only validation logic.
+Fields and controls in `ExtractView`/`ExtractViewModel`:
 
-User-facing guarantees:
+- **Carrier file** (`CarrierPath`) with Browse + drag/drop support.
+- **Output folder/file** (`OutputPath`) with Browse + drag/drop support.
+- **Password** (`Password`) text input.
+- **Require encryption** (`RequireEncryption`) checkbox.
+- **Allow overwrite existing output** (`AllowOverwrite`) checkbox.
+- Action: **Extract**.
+- Read-only operation output pane bound to `ResultMessage`.
 
-- Invalid configuration combinations fail fast before carrier handler I/O with deterministic `InvalidArguments` semantics.
-- Existing-output protection behaves deterministically (`OutputAlreadyExists`) when overwrite is disallowed.
-- Format resolution and unsupported-carrier failures are deterministic due to shared resolver precedence.
-- Wrong-password, payload/header corruption, and insufficient-capacity outcomes preserve stable domain error codes for actionable UI messages.
+Implementation references:
 
-This behavior is covered by shared orchestration/policy tests:
+- `src/StegoForge.Wpf/Views/ExtractView.xaml`
+- `src/StegoForge.Wpf/ViewModels/ExtractViewModel.cs`
 
-- `tests/StegoForge.Tests.Integration/ApplicationServiceOrchestrationIntegrationTests.cs`
-- `tests/StegoForge.Tests.Integration/OrchestrationConsistencyIntegrationTests.cs`
-- `tests/StegoForge.Tests.Unit/Application/OperationPolicyValidatorTests.cs`
-- `tests/StegoForge.Tests.Unit/Application/CarrierFormatResolverTests.cs`
+## Validation behavior (v1)
 
+Validation is performed in view models through `UiOperationPolicyValidator` and surfaced via `INotifyDataErrorInfo` bindings.
 
-## Current status
+- Validation runs on each relevant property change.
+- Field-level validation messages are shown beneath each textbox via WPF validation error binding.
+- Command availability is validation-aware:
+  - Embed actions are disabled when required fields/options are invalid.
+  - Extract action is disabled when required fields/options are invalid.
+- Drag/drop path application rejects invalid paths and shows a deterministic "Invalid file path" notification.
+- Validation rules align with shared application policy semantics (including encryption/password policy and overwrite policy) to keep GUI/CLI behavior consistent.
 
-- Project scaffolding and baseline startup are in place.
-- Full UX and command flows are planned in roadmap milestones.
+Key references:
+
+- `src/StegoForge.Wpf/Validation/UiOperationPolicyValidator.cs`
+- `src/StegoForge.Wpf/ViewModels/EmbedViewModel.cs`
+- `src/StegoForge.Wpf/ViewModels/ExtractViewModel.cs`
+- `tests/StegoForge.Tests.Wpf/ViewModelValidationTests.cs`
+- `tests/StegoForge.Tests.Wpf/ViewModelBrowseCommandTests.cs`
+
+## Progress and error message semantics (v1)
+
+All operation view models inherit shared operation-state fields from `OperationViewModelBase`.
+
+### Shared state contract
+
+- `ProgressText` defaults to `Idle`.
+- `StatusMessage` defaults to `Ready.`
+- `LastErrorCode`/`LastErrorMessage` are cleared at operation start.
+
+### Embed semantics
+
+- On user cancellation at confirmation prompt:
+  - `StatusMessage = "Embed cancelled."`
+  - `ProgressText = "Cancelled"`
+  - `ResultMessage = "Embed cancelled by user."`
+- During execution:
+  - `ProgressText` transitions through `Preparing payload` then `Submitting embed request`.
+- On success:
+  - `StatusMessage = "Embed completed."`
+  - `ProgressText = "Completed"`
+  - `ResultMessage` includes bytes embedded, resolved output path, and carrier format id.
+- On failure:
+  - Exception is mapped through `StegoErrorMapper`.
+  - `StatusMessage = "Embed failed."`
+  - `ProgressText = "Failed"`
+  - `ResultMessage` uses deterministic shape: `Embed failed (<Code>): <Message>`.
+  - `LastErrorCode`/`LastErrorMessage` are populated and notification dialog is shown.
+
+### Extract semantics
+
+- On user cancellation at confirmation prompt:
+  - `StatusMessage = "Extract cancelled."`
+  - `ProgressText = "Cancelled"`
+  - `ResultMessage = "Extract cancelled by user."`
+- During execution:
+  - `ProgressText` transitions through `Preparing request` then `Running extraction`.
+- On success:
+  - `StatusMessage = "Extract completed."`
+  - `ProgressText = "Completed"`
+  - `ResultMessage` includes extracted payload size, resolved output path, and carrier format id.
+- On failure:
+  - Exception is mapped through `StegoErrorMapper`.
+  - `StatusMessage = "Extract failed."`
+  - `ProgressText = "Failed"`
+  - `ResultMessage` uses deterministic shape: `Extract failed (<Code>): <Message>`.
+  - `LastErrorCode`/`LastErrorMessage` are populated and notification dialog is shown.
+
+Behavior coverage:
+
+- `tests/StegoForge.Tests.Wpf/ViewModelOperationStateTests.cs`
+- `tests/StegoForge.Tests.Wpf/WpfCommandFlowTests.cs`
+
+## MVVM and shared-service alignment
+
+- Views declare bindings and input events only.
+- View models own command orchestration, validation triggering, and UI state transitions.
+- Application service calls (`IEmbedService`, `IExtractService`, `ICapacityService`, `IInfoService`) remain the source of domain behavior.
+- Error mapping uses shared domain error codes so GUI messages stay consistent with CLI outcomes.
