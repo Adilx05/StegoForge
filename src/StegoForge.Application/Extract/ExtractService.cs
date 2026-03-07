@@ -25,7 +25,8 @@ public sealed class ExtractService(
         policyGate.ValidateExtractRequest(request);
 
         await using var carrierStream = File.OpenRead(request.CarrierPath);
-        var handler = formatResolver.Resolve(carrierStream);
+        var resolution = formatResolver.Resolve(carrierStream, request.CarrierPath);
+        var handler = resolution.Handler;
         carrierStream.Position = 0;
 
         var envelopeBytes = await handler.ExtractAsync(carrierStream, cancellationToken).ConfigureAwait(false);
@@ -50,7 +51,8 @@ public sealed class ExtractService(
                 $"Resolved carrier format: {handler.Format}.",
                 $"Envelope bytes extracted: {envelopeBytes.LongLength}.",
                 $"Compression descriptor: {envelope.Header.CompressionDescriptor}.",
-                $"Encryption descriptor: {envelope.Header.EncryptionDescriptor}."
+                $"Encryption descriptor: {envelope.Header.EncryptionDescriptor}.",
+                .. resolution.Notes
             ],
             duration: started.Elapsed,
             algorithmIdentifier: $"cmp:{envelope.Header.CompressionDescriptor}|enc:{envelope.Header.EncryptionDescriptor}",

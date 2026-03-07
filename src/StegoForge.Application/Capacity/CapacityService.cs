@@ -19,7 +19,8 @@ public sealed class CapacityService(CarrierFormatResolver formatResolver, Operat
         policyGate.ValidateCapacityRequest(request);
 
         await using var stream = File.OpenRead(request.CarrierPath);
-        var handler = formatResolver.Resolve(stream);
+        var resolution = formatResolver.Resolve(stream, request.CarrierPath);
+        var handler = resolution.Handler;
         stream.Position = 0;
 
         var maxRawCapacity = await handler.GetCapacityAsync(stream, cancellationToken).ConfigureAwait(false);
@@ -39,7 +40,8 @@ public sealed class CapacityService(CarrierFormatResolver formatResolver, Operat
             [
                 $"Resolved carrier format: {handler.Format}.",
                 "LSB channels used: 3 (RGB only).",
-                "Safe capacity policy reserves 128 bytes for payload envelope overhead."
+                "Safe capacity policy reserves 128 bytes for payload envelope overhead.",
+                .. resolution.Notes
             ],
             algorithmIdentifier: "capacity:bmp-lsb-safe-estimator",
             providerIdentifier: ProviderId);

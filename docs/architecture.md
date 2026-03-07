@@ -60,6 +60,23 @@ Dependencies should flow inward:
 6. Envelope verification and payload reconstruction.
 7. Result includes payload stream/file and metadata.
 
+
+## Carrier format resolver selection policy
+
+`CarrierFormatResolver` now enforces a deterministic and explicit selection policy for all application operations (`Embed`, `Extract`, `Info`, `Capacity`):
+
+1. Registered handlers are ordered deterministically by `ICarrierFormatHandler.Format` (ordinal) and then by handler type name.
+2. The carrier file extension (when present) is treated as an eligibility hint and compared to the handler format token prefix (for example `.png` -> `png-*`).
+3. Signature validation is always authoritative: handlers must still return `Supports(stream) == true`.
+4. Selection attempts two tiers:
+   - **Primary tier:** extension-eligible handlers that support the stream.
+   - **Fallback tier:** non-extension-eligible handlers that support the stream.
+5. If multiple handlers match in the selected tier, the first handler from deterministic ordering is selected, and a precedence diagnostic note is emitted.
+6. If fallback tier is used, a fallback diagnostic note is emitted.
+7. If no handler supports the stream, `UnsupportedFormatException` is thrown with deterministic messaging.
+
+This policy keeps resolution stable across runs, allows extension-guided preference without trusting extension alone, and preserves typed deterministic failure behavior.
+
 ## Finalized processing order and provider boundaries
 
 Milestone 5 locks the pipeline boundary between compression and encryption:
