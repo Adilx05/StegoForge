@@ -77,7 +77,7 @@ public sealed class PngLsbFormatHandlerTests
     [Fact]
     public async Task EmbedAsync_EnvelopeBeyondConfiguredLimit_ThrowsInvalidArguments()
     {
-        var limitedHandler = new PngLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 128, maxHeaderBytes: 64));
+        var limitedHandler = new PngLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 8, maxHeaderBytes: 64));
         using var carrier = await CreatePngAsync(32, 32, withAlpha: true);
         using var output = new MemoryStream();
 

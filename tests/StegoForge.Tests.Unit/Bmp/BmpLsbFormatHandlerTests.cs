@@ -152,7 +152,7 @@ public sealed class BmpLsbFormatHandlerTests
     [Fact]
     public async Task EmbedAsync_EnvelopeBeyondConfiguredLimit_ThrowsInvalidArguments()
     {
-        var limited = new BmpLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 256, maxHeaderBytes: 64));
+        var limited = new BmpLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 8, maxHeaderBytes: 64));
         using var carrier = await CreateBmpAsync(32, 32, BmpBitsPerPixel.Pixel24);
         using var output = new MemoryStream();
 

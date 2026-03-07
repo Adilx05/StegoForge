@@ -93,7 +93,7 @@ public sealed class WavLsbFormatHandlerTests
     [Fact]
     public async Task EmbedAsync_EnvelopeBeyondConfiguredLimit_ThrowsInvalidArguments()
     {
-        var limited = new WavLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 128, maxHeaderBytes: 64));
+        var limited = new WavLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 8, maxHeaderBytes: 64));
         using var carrier = CreatePcm16Wav(sampleCountPerChannel: 2_048, channels: 1);
         using var output = new MemoryStream();
 
