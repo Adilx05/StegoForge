@@ -23,9 +23,9 @@ public sealed class EmbedViewModel : OperationViewModelBase
     private readonly AsyncRelayCommand _checkCapacityCommand;
     private readonly AsyncRelayCommand _getInfoCommand;
     private readonly AsyncRelayCommand _embedCommand;
-    private readonly AsyncRelayCommand _browseCarrierCommand;
-    private readonly AsyncRelayCommand _browsePayloadCommand;
-    private readonly AsyncRelayCommand _browseOutputCommand;
+    private readonly RelayCommand _browseCarrierCommand;
+    private readonly RelayCommand _browsePayloadCommand;
+    private readonly RelayCommand _browseOutputCommand;
 
     private string _carrierPath = string.Empty;
     private string _payloadPath = string.Empty;
@@ -60,9 +60,9 @@ public sealed class EmbedViewModel : OperationViewModelBase
         _checkCapacityCommand = new AsyncRelayCommand(CheckCapacityAsync, () => !HasErrors);
         _getInfoCommand = new AsyncRelayCommand(GetInfoAsync, () => !HasErrors);
         _embedCommand = new AsyncRelayCommand(EmbedAsync, () => !HasErrors && !IsBusy);
-        _browseCarrierCommand = new AsyncRelayCommand(BrowseCarrierAsync, () => !IsBusy);
-        _browsePayloadCommand = new AsyncRelayCommand(BrowsePayloadAsync, () => !IsBusy);
-        _browseOutputCommand = new AsyncRelayCommand(BrowseOutputAsync, () => !IsBusy);
+        _browseCarrierCommand = new RelayCommand(BrowseCarrier, () => !IsBusy);
+        _browsePayloadCommand = new RelayCommand(BrowsePayload, () => !IsBusy);
+        _browseOutputCommand = new RelayCommand(BrowseOutput, () => !IsBusy);
 
         CheckCapacityCommand = _checkCapacityCommand;
         GetInfoCommand = _getInfoCommand;
@@ -189,22 +189,19 @@ public sealed class EmbedViewModel : OperationViewModelBase
         return TryApplyDroppedPath(path, IsValidOutputDropPath, x => OutputPath = x, "Dropped output path is invalid.");
     }
 
-    private Task BrowseCarrierAsync()
+    private void BrowseCarrier()
     {
         CarrierPath = _fileDialogService.SelectCarrierPath(CarrierPath) ?? CarrierPath;
-        return Task.CompletedTask;
     }
 
-    private Task BrowsePayloadAsync()
+    private void BrowsePayload()
     {
         PayloadPath = _fileDialogService.SelectPayloadPath(PayloadPath) ?? PayloadPath;
-        return Task.CompletedTask;
     }
 
-    private Task BrowseOutputAsync()
+    private void BrowseOutput()
     {
         OutputPath = _fileDialogService.SelectEmbedOutputPath(OutputPath) ?? OutputPath;
-        return Task.CompletedTask;
     }
 
     private async Task CheckCapacityAsync()

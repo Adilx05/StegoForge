@@ -18,8 +18,8 @@ public sealed class ExtractViewModel : OperationViewModelBase
     private readonly IFileDialogService _fileDialogService;
     private readonly INotificationService _notificationService;
     private readonly AsyncRelayCommand _extractCommand;
-    private readonly AsyncRelayCommand _browseCarrierCommand;
-    private readonly AsyncRelayCommand _browseOutputCommand;
+    private readonly RelayCommand _browseCarrierCommand;
+    private readonly RelayCommand _browseOutputCommand;
 
     private string _carrierPath = string.Empty;
     private string _outputPath = string.Empty;
@@ -45,8 +45,8 @@ public sealed class ExtractViewModel : OperationViewModelBase
         _notificationService = notificationService;
 
         _extractCommand = new AsyncRelayCommand(ExtractAsync, () => !HasErrors && !IsBusy);
-        _browseCarrierCommand = new AsyncRelayCommand(BrowseCarrierAsync, () => !IsBusy);
-        _browseOutputCommand = new AsyncRelayCommand(BrowseOutputAsync, () => !IsBusy);
+        _browseCarrierCommand = new RelayCommand(BrowseCarrier, () => !IsBusy);
+        _browseOutputCommand = new RelayCommand(BrowseOutput, () => !IsBusy);
         ExtractCommand = _extractCommand;
         BrowseCarrierCommand = _browseCarrierCommand;
         BrowseOutputCommand = _browseOutputCommand;
@@ -147,16 +147,14 @@ public sealed class ExtractViewModel : OperationViewModelBase
         return TryApplyDroppedPath(path, IsValidOutputDropPath, x => OutputPath = x, "Dropped output path is invalid.");
     }
 
-    private Task BrowseCarrierAsync()
+    private void BrowseCarrier()
     {
         CarrierPath = _fileDialogService.SelectCarrierPath(CarrierPath) ?? CarrierPath;
-        return Task.CompletedTask;
     }
 
-    private Task BrowseOutputAsync()
+    private void BrowseOutput()
     {
         OutputPath = _fileDialogService.SelectExtractOutputPath(OutputPath) ?? OutputPath;
-        return Task.CompletedTask;
     }
 
     private async Task ExtractAsync()

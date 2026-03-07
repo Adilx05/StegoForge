@@ -14,13 +14,22 @@ public sealed class ViewModelBrowseCommandTests
     public void EmbedBrowseCommands_UpdateExpectedPathProperties()
     {
         using var fixture = new TempFileFixture();
+        var initialCarrier = Path.Combine(fixture.RootPath, "initial-carrier.bin");
+        var initialPayload = Path.Combine(fixture.RootPath, "initial-payload.bin");
+        var initialOutput = Path.Combine(fixture.RootPath, "initial-output.bin");
+
         var dialog = new StubFileDialogService
         {
             CarrierPathToReturn = fixture.CarrierPath,
             PayloadPathToReturn = fixture.PayloadPath,
             EmbedOutputPathToReturn = fixture.OutputPath,
         };
-        var vm = CreateEmbedViewModel(dialog);
+        var vm = CreateEmbedViewModel(dialog)
+        {
+            CarrierPath = initialCarrier,
+            PayloadPath = initialPayload,
+            OutputPath = initialOutput,
+        };
 
         vm.BrowseCarrierCommand.Execute(null);
         vm.BrowsePayloadCommand.Execute(null);
@@ -29,29 +38,37 @@ public sealed class ViewModelBrowseCommandTests
         Assert.Equal(fixture.CarrierPath, vm.CarrierPath);
         Assert.Equal(fixture.PayloadPath, vm.PayloadPath);
         Assert.Equal(fixture.OutputPath, vm.OutputPath);
-        Assert.Equal(fixture.CarrierPath, dialog.LastCarrierInitialPath);
-        Assert.Equal(fixture.PayloadPath, dialog.LastPayloadInitialPath);
-        Assert.Equal(fixture.OutputPath, dialog.LastEmbedOutputInitialPath);
+        Assert.Equal(initialCarrier, dialog.LastCarrierInitialPath);
+        Assert.Equal(initialPayload, dialog.LastPayloadInitialPath);
+        Assert.Equal(initialOutput, dialog.LastEmbedOutputInitialPath);
     }
 
     [Fact]
     public void ExtractBrowseCommands_UpdateExpectedPathProperties()
     {
         using var fixture = new TempFileFixture();
+        var initialCarrier = Path.Combine(fixture.RootPath, "initial-carrier.bin");
+        var initialOutput = Path.Combine(fixture.RootPath, "initial-output.bin");
+
         var dialog = new StubFileDialogService
         {
             CarrierPathToReturn = fixture.CarrierPath,
             ExtractOutputPathToReturn = fixture.OutputPath,
         };
-        var vm = CreateExtractViewModel(dialog);
+        var vm = CreateExtractViewModel(dialog)
+        {
+            CarrierPath = initialCarrier,
+            OutputPath = initialOutput,
+            AllowOverwrite = true,
+        };
 
         vm.BrowseCarrierCommand.Execute(null);
         vm.BrowseOutputCommand.Execute(null);
 
         Assert.Equal(fixture.CarrierPath, vm.CarrierPath);
         Assert.Equal(fixture.OutputPath, vm.OutputPath);
-        Assert.Equal(fixture.CarrierPath, dialog.LastCarrierInitialPath);
-        Assert.Equal(fixture.OutputPath, dialog.LastExtractOutputInitialPath);
+        Assert.Equal(initialCarrier, dialog.LastCarrierInitialPath);
+        Assert.Equal(initialOutput, dialog.LastExtractOutputInitialPath);
     }
 
     [Fact]
