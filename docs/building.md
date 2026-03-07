@@ -55,6 +55,24 @@ When changing compression behavior, run these focused commands before broader su
 These commands specifically cover compression provider contract enforcement, compression-mode policy (`Disabled`/`Enabled`/`Automatic`), and deterministic decompression failure behavior.
 
 
+## Application orchestration/policy-focused test commands
+
+When changing service orchestration, policy validation, or deterministic error behavior, run these targeted commands first:
+
+```bash
+# Application-service DI + shared orchestration integration checks
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~ApplicationServiceOrchestrationIntegrationTests
+
+# Cross-format orchestration consistency + fail-fast policy integration checks
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~OrchestrationConsistencyIntegrationTests
+
+# Policy validator + resolver unit checks
+ dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --filter "FullyQualifiedName~OperationPolicyValidatorTests|FullyQualifiedName~CarrierFormatResolverTests"
+```
+
+These commands cover shared DI/service orchestration wiring, fail-fast policy enforcement before handler I/O, deterministic resolver precedence, and cross-format consistency guarantees.
+
+
 ## BMP-focused test commands
 
 When changing BMP handler behavior, run these targeted commands before broader suites:

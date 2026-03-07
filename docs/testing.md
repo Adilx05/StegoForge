@@ -208,6 +208,50 @@ The following tests are the PNG v1 acceptance set and should be referenced by ex
 - `Supports_ReturnsFalse_ForUnsupportedGrayscaleColorType`
 - `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedColorType`
 
+
+## Application orchestration and policy
+
+The application layer uses shared orchestration/policy services so CLI and GUI behavior stays aligned. The following tests should be treated as the authoritative orchestration+policy contract set.
+
+### Service registration and shared orchestration guarantees
+
+- `AddStegoForgeApplicationServices_ResolvesAllApplicationServices`
+  - Guarantees DI registration always resolves `IEmbedService`, `IExtractService`, `ICapacityService`, and `IInfoService` from one application-service graph.
+- `EmbeddedRoundTrip_UsesApplicationServicesWithSharedOrchestration`
+  - Guarantees embed/info/extract flow through shared orchestration services and reports deterministic provider identifiers.
+
+File: `tests/StegoForge.Tests.Integration/ApplicationServiceOrchestrationIntegrationTests.cs`.
+
+### Operation-policy guard guarantees
+
+- `ValidateEmbedRequest_AllowsValidCombination`
+  - Guarantees valid embed request combinations pass policy validation.
+- `ValidateEmbedRequest_ThrowsInvalidArguments_WhenEncryptionRequiredAndPasswordSourceMissing`
+  - Guarantees encryption-required requests fail fast when password source metadata is incomplete.
+- `ValidateEmbedRequest_ThrowsInvalidArguments_WhenCompressionModeDisabledButCompressionLevelNotZero`
+  - Guarantees invalid compression-mode/level combinations fail before processing.
+- `ValidateEmbedRequest_ThrowsOutputExists_WhenOutputExistsAndOverwriteDisallowed`
+  - Guarantees overwrite policy failures map deterministically to `OutputAlreadyExists`.
+- `Embed_InvalidPolicyCombination_FailsBeforeHandlerIo`
+- `Extract_InvalidPolicyCombination_FailsBeforeHandlerIo`
+  - Guarantee invalid application-policy combinations are rejected before any carrier handler I/O.
+
+Files: `tests/StegoForge.Tests.Unit/Application/OperationPolicyValidatorTests.cs`, `tests/StegoForge.Tests.Integration/OrchestrationConsistencyIntegrationTests.cs`.
+
+### Resolver and cross-format consistency guarantees
+
+- `Resolve_ReturnsSingleMatchingHandler`
+- `Resolve_UsesDeterministicPrecedence_WhenMultipleHandlersMatch`
+- `Resolve_ThrowsUnsupportedFormat_WhenNoHandlerMatches`
+  - Guarantee deterministic handler selection/precedence and deterministic unsupported-format outcomes.
+- `EmbedExtract_RoundTripConsistency_IsEquivalentAcrossFormats`
+- `Embed_WhenCapacityIsInsufficient_UsesSameErrorSemanticsPatternAcrossFormats`
+- `GetInfo_ResponseContract_IsComparableAcrossFormats`
+- `Extract_EncryptedPayload_WrongPasswordAndTamperPaths_AreCoveredViaApplicationServices`
+  - Guarantee consistent embed/extract/info behavior and deterministic error semantics across PNG/BMP/WAV handlers.
+
+Files: `tests/StegoForge.Tests.Unit/Application/CarrierFormatResolverTests.cs`, `tests/StegoForge.Tests.Integration/OrchestrationConsistencyIntegrationTests.cs`.
+
 ## Test categories to prioritize
 
 1. **Payload framing correctness**

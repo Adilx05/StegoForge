@@ -134,11 +134,31 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Implement use-case orchestration with cohesive validation rules.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- Application services coordinate provider selection and pipeline ordering.
-- Validation rules catch invalid combinations before processing.
-- End-to-end tests verify consistent behavior across handlers.
+- [x] Shared application orchestration services remain the single coordination path for embed/extract/capacity/info requests:
+  - `src/StegoForge.Application/Embed/EmbedService.cs`
+  - `src/StegoForge.Application/Extract/ExtractService.cs`
+  - `src/StegoForge.Application/Capacity/CapacityService.cs`
+  - `src/StegoForge.Application/Info/InfoService.cs`
+  - `src/StegoForge.Application/Payload/PayloadOrchestrationService.cs`
+- [x] Service registration keeps orchestration dependencies consistent via `src/StegoForge.Application/ApplicationServiceCollectionExtensions.cs`, validated by `AddStegoForgeApplicationServices_ResolvesAllApplicationServices` in `tests/StegoForge.Tests.Integration/ApplicationServiceOrchestrationIntegrationTests.cs`.
+- [x] Policy-gate rules are enforced before handler I/O via `src/StegoForge.Application/Validation/OperationPolicyValidator.cs`, validated by:
+  - `ValidateEmbedRequest_ThrowsInvalidArguments_WhenEncryptionRequiredAndPasswordSourceMissing`
+  - `ValidateEmbedRequest_ThrowsInvalidArguments_WhenCompressionModeDisabledButCompressionLevelNotZero`
+  - `Embed_InvalidPolicyCombination_FailsBeforeHandlerIo`
+  - `Extract_InvalidPolicyCombination_FailsBeforeHandlerIo`
+  - files: `tests/StegoForge.Tests.Unit/Application/OperationPolicyValidatorTests.cs`, `tests/StegoForge.Tests.Integration/OrchestrationConsistencyIntegrationTests.cs`.
+- [x] Format resolution and precedence rules stay deterministic via `src/StegoForge.Application/Formats/CarrierFormatResolver.cs`, validated by:
+  - `Resolve_ReturnsSingleMatchingHandler`
+  - `Resolve_UsesDeterministicPrecedence_WhenMultipleHandlersMatch`
+  - `Resolve_ThrowsUnsupportedFormat_WhenNoHandlerMatches`
+  - file: `tests/StegoForge.Tests.Unit/Application/CarrierFormatResolverTests.cs`.
+- [x] Cross-format orchestration consistency is covered by integration tests in `tests/StegoForge.Tests.Integration/OrchestrationConsistencyIntegrationTests.cs`:
+  - `EmbedExtract_RoundTripConsistency_IsEquivalentAcrossFormats`
+  - `Embed_WhenCapacityIsInsufficient_UsesSameErrorSemanticsPatternAcrossFormats`
+  - `GetInfo_ResponseContract_IsComparableAcrossFormats`
+  - `Extract_EncryptedPayload_WrongPasswordAndTamperPaths_AreCoveredViaApplicationServices`.
 
 ## Milestone 10 — CLI command surface v1
 
