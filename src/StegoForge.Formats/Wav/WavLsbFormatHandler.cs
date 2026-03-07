@@ -107,7 +107,8 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
             notes:
             [
                 "Channel strategy: one least-significant bit per 16-bit PCM sample.",
-                "Supported WAV set for wav-lsb-v1: RIFF/WAVE PCM format 1 with 16-bit little-endian mono/stereo.",
+                "Supported WAV set for wav-lsb-v1: " + WavLsbV1Formats.SupportedSetDescription,
+                WavLsbV1Formats.RequiredChunkDescription,
                 "Structural chunks are preserved verbatim; only data-chunk sample LSBs are modified.",
                 $"Carrier details: channels={wavData.Channels}, sample-rate-hz={wavData.SampleRate}, bits-per-sample={wavData.BitsPerSample}, sample-count={wavData.SampleCount}."
             ]);
@@ -207,7 +208,7 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
             fileBytes = ms.ToArray();
         }
 
-        if (fileBytes.Length < 12)
+        if (fileBytes.Length < WavLsbV1Formats.RiffWavePreambleBytes)
         {
             carrierData = default;
             validationError = new InvalidHeaderException("WAV header is truncated; expected RIFF/WAVE preamble.");
@@ -218,6 +219,15 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
         {
             carrierData = default;
             validationError = new UnsupportedFormatException("Carrier must be a RIFF/WAVE file for wav-lsb-v1.");
+            return false;
+        }
+
+        var declaredRiffPayloadSize = BinaryPrimitives.ReadUInt32LittleEndian(fileBytes.AsSpan(4, 4));
+        var declaredFileLength = declaredRiffPayloadSize + 8UL;
+        if (declaredFileLength > (ulong)fileBytes.Length)
+        {
+            carrierData = default;
+            validationError = new InvalidHeaderException("WAV RIFF size exceeds available file length.");
             return false;
         }
 
@@ -241,7 +251,7 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
 
             if (HasAscii(fileBytes, cursor, "fmt "))
             {
-                if (chunkSize < 16)
+                if (!WavLsbV1Formats.IsFmtChunkSizeSupported(chunkSize))
                 {
                     carrierData = default;
                     validationError = new InvalidHeaderException("WAV fmt chunk is truncated; expected at least 16 bytes.");
@@ -283,24 +293,24 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
 
         var fmtData = fmt.Value;
 
-        if (fmtData.AudioFormat != 1)
+        if (!WavLsbV1Formats.IsSupportedFormatTag(fmtData.AudioFormat))
         {
             carrierData = default;
-            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports PCM format 1 only; detected format {fmtData.AudioFormat}.");
+            validationError = new UnsupportedFormatException($"Unsupported WAV format tag for wav-lsb-v1: detected {fmtData.AudioFormat}; supported set is {WavLsbV1Formats.SupportedSetDescription}");
             return false;
         }
 
-        if (fmtData.BitsPerSample != 16)
+        if (!WavLsbV1Formats.IsSupportedBitsPerSample(fmtData.BitsPerSample))
         {
             carrierData = default;
-            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports 16-bit samples only; detected {fmtData.BitsPerSample}-bit.");
+            validationError = new UnsupportedFormatException($"Unsupported WAV bit depth for wav-lsb-v1: detected {fmtData.BitsPerSample}-bit; supported set is {WavLsbV1Formats.SupportedSetDescription}");
             return false;
         }
 
-        if (fmtData.Channels is not (1 or 2))
+        if (!WavLsbV1Formats.IsSupportedChannelCount(fmtData.Channels))
         {
             carrierData = default;
-            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports mono/stereo only; detected {fmtData.Channels} channel(s).");
+            validationError = new UnsupportedFormatException($"Unsupported WAV channel count for wav-lsb-v1: detected {fmtData.Channels}; supported set is {WavLsbV1Formats.SupportedSetDescription}");
             return false;
         }
 
@@ -320,7 +330,7 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
             return false;
         }
 
-        if ((dataChunkSize % fmtData.BlockAlign) != 0)
+        if (!WavLsbV1Formats.IsDataChunkSizeAligned(dataChunkSize, fmtData.BlockAlign))
         {
             carrierData = default;
             validationError = new InvalidHeaderException("WAV data chunk size is not aligned to sample frame size.");

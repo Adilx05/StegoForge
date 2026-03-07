@@ -103,6 +103,23 @@ Unsupported combinations are fail-fast and deterministic:
 - unsupported bit depth/compression throw `UnsupportedFormatException` with detected mode + supported set,
 - malformed BMP headers throw `InvalidHeaderException` (for example truncated headers or invalid dimensions).
 
+## WAV handler v1 scope and unsupported-mode behavior
+
+`WavLsbFormatHandler` (`src/StegoForge.Formats/Wav/WavLsbFormatHandler.cs`) defines `wav-lsb-v1` as a strict RIFF/WAVE subset:
+
+- supported carriers are RIFF/WAVE files that contain both `fmt ` and `data` chunks,
+- supported format tag is PCM (`wFormatTag = 1`) only,
+- supported bit depth is 16-bit little-endian samples only,
+- supported channel layouts are mono (1) and stereo (2) only,
+- chunk constraints require `fmt ` chunk size >= 16, valid `BlockAlign`/`ByteRate`, and `data` chunk size aligned to `BlockAlign`.
+
+Unsupported/malformed inputs are fail-fast and deterministic:
+
+- `Supports(...)` returns `false` on unsupported or malformed WAV carriers,
+- operational calls (`GetCapacityAsync`, `EmbedAsync`, `ExtractAsync`, `GetInfoAsync`) validate RIFF/WAVE preamble and required chunks before processing,
+- non-PCM, unsupported bit depth, and unsupported channel count throw `UnsupportedFormatException`,
+- malformed/truncated headers and missing required chunks throw `InvalidHeaderException`.
+
 ## Provider selection strategy and fallback behavior
 
 Application orchestration should resolve providers through deterministic selection rules so behavior is predictable across CLI and GUI:
