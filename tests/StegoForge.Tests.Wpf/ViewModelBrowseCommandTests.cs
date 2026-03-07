@@ -24,12 +24,10 @@ public sealed class ViewModelBrowseCommandTests
             PayloadPathToReturn = fixture.PayloadPath,
             EmbedOutputPathToReturn = fixture.OutputPath,
         };
-        var vm = CreateEmbedViewModel(dialog)
-        {
-            CarrierPath = initialCarrier,
-            PayloadPath = initialPayload,
-            OutputPath = initialOutput,
-        };
+        var vm = CreateEmbedViewModel(dialog);
+        vm.CarrierPath = initialCarrier;
+        vm.PayloadPath = initialPayload;
+        vm.OutputPath = initialOutput;
 
         vm.BrowseCarrierCommand.Execute(null);
         vm.BrowsePayloadCommand.Execute(null);
@@ -55,12 +53,10 @@ public sealed class ViewModelBrowseCommandTests
             CarrierPathToReturn = fixture.CarrierPath,
             ExtractOutputPathToReturn = fixture.OutputPath,
         };
-        var vm = CreateExtractViewModel(dialog)
-        {
-            CarrierPath = initialCarrier,
-            OutputPath = initialOutput,
-            AllowOverwrite = true,
-        };
+        var vm = CreateExtractViewModel(dialog);
+        vm.CarrierPath = initialCarrier;
+        vm.OutputPath = initialOutput;
+        vm.AllowOverwrite = true;
 
         vm.BrowseCarrierCommand.Execute(null);
         vm.BrowseOutputCommand.Execute(null);
