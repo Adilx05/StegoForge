@@ -49,6 +49,12 @@ jobs:
           dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build --logger "trx;LogFileName=integration.trx" --results-directory TestResults
           dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-build --logger "trx;LogFileName=cli.trx" --results-directory TestResults
 
+      - name: PNG v1 acceptance smoke filter (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build --filter FullyQualifiedName~PngRoundTripIntegrationTests --logger "trx;LogFileName=png-roundtrip.trx" --results-directory TestResults
+          dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build --filter FullyQualifiedName~CapacityServiceIntegrationTests --logger "trx;LogFileName=png-capacity.trx" --results-directory TestResults
+
       - name: Upload core/CLI test artifacts
         if: always()
         uses: actions/upload-artifact@v4
