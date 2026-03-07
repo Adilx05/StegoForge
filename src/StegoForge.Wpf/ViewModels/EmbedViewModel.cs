@@ -1,9 +1,11 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
+using StegoForge.Wpf.Validation;
 
 namespace StegoForge.Wpf.ViewModels;
 
@@ -12,21 +14,46 @@ public sealed class EmbedViewModel : ViewModelBase
     private readonly IEmbedService _embedService;
     private readonly ICapacityService _capacityService;
     private readonly IInfoService _infoService;
+    private readonly UiOperationPolicyValidator _validationService;
+
+    private readonly AsyncRelayCommand _checkCapacityCommand;
+    private readonly AsyncRelayCommand _getInfoCommand;
+    private readonly AsyncRelayCommand _embedCommand;
 
     private string _carrierPath = string.Empty;
     private string _payloadPath = string.Empty;
     private string _outputPath = string.Empty;
+    private string _password = string.Empty;
+    private bool _requireEncryption;
+    private bool _allowOverwrite;
     private string _resultMessage = "Embed workflow is ready.";
 
-    public EmbedViewModel(IEmbedService embedService, ICapacityService capacityService, IInfoService infoService)
+    public EmbedViewModel(
+        IEmbedService embedService,
+        ICapacityService capacityService,
+        IInfoService infoService,
+        UiOperationPolicyValidator validationService)
     {
+        ArgumentNullException.ThrowIfNull(embedService);
+        ArgumentNullException.ThrowIfNull(capacityService);
+        ArgumentNullException.ThrowIfNull(infoService);
+        ArgumentNullException.ThrowIfNull(validationService);
+
         _embedService = embedService;
         _capacityService = capacityService;
         _infoService = infoService;
+        _validationService = validationService;
 
-        CheckCapacityCommand = new AsyncRelayCommand(CheckCapacityAsync);
-        GetInfoCommand = new AsyncRelayCommand(GetInfoAsync);
-        EmbedCommand = new AsyncRelayCommand(EmbedAsync);
+        _checkCapacityCommand = new AsyncRelayCommand(CheckCapacityAsync, () => !HasErrors);
+        _getInfoCommand = new AsyncRelayCommand(GetInfoAsync, () => !HasErrors);
+        _embedCommand = new AsyncRelayCommand(EmbedAsync, () => !HasErrors);
+
+        CheckCapacityCommand = _checkCapacityCommand;
+        GetInfoCommand = _getInfoCommand;
+        EmbedCommand = _embedCommand;
+
+        ErrorsChanged += (_, _) => RaiseCommandCanExecuteChanged();
+        Validate();
     }
 
     public event EventHandler<string>? StatusChanged;
@@ -40,19 +67,73 @@ public sealed class EmbedViewModel : ViewModelBase
     public string CarrierPath
     {
         get => _carrierPath;
-        set => SetProperty(ref _carrierPath, value);
+        set
+        {
+            if (SetProperty(ref _carrierPath, value))
+            {
+                Validate();
+            }
+        }
     }
 
     public string PayloadPath
     {
         get => _payloadPath;
-        set => SetProperty(ref _payloadPath, value);
+        set
+        {
+            if (SetProperty(ref _payloadPath, value))
+            {
+                Validate();
+            }
+        }
     }
 
     public string OutputPath
     {
         get => _outputPath;
-        set => SetProperty(ref _outputPath, value);
+        set
+        {
+            if (SetProperty(ref _outputPath, value))
+            {
+                Validate();
+            }
+        }
+    }
+
+    public string Password
+    {
+        get => _password;
+        set
+        {
+            if (SetProperty(ref _password, value))
+            {
+                Validate();
+            }
+        }
+    }
+
+    public bool RequireEncryption
+    {
+        get => _requireEncryption;
+        set
+        {
+            if (SetProperty(ref _requireEncryption, value))
+            {
+                Validate();
+            }
+        }
+    }
+
+    public bool AllowOverwrite
+    {
+        get => _allowOverwrite;
+        set
+        {
+            if (SetProperty(ref _allowOverwrite, value))
+            {
+                Validate();
+            }
+        }
     }
 
     public string ResultMessage
@@ -101,7 +182,21 @@ public sealed class EmbedViewModel : ViewModelBase
         try
         {
             var payload = File.ReadAllBytes(PayloadPath);
-            var request = new EmbedRequest(CarrierPath, OutputPath, payload);
+            var passwordOptions = string.IsNullOrWhiteSpace(Password)
+                ? new PasswordOptions(
+                    requirement: RequireEncryption ? PasswordRequirement.Required : PasswordRequirement.Optional,
+                    sourceHint: PasswordSourceHint.None,
+                    sourceReference: null)
+                : new PasswordOptions(
+                    requirement: RequireEncryption ? PasswordRequirement.Required : PasswordRequirement.Optional,
+                    sourceHint: PasswordSourceHint.Prompt,
+                    sourceReference: Password);
+
+            var processingOptions = new ProcessingOptions(
+                encryptionMode: RequireEncryption ? EncryptionMode.Required : EncryptionMode.Optional,
+                overwriteBehavior: AllowOverwrite ? OverwriteBehavior.Allow : OverwriteBehavior.Disallow);
+
+            var request = new EmbedRequest(CarrierPath, OutputPath, payload, processingOptions, passwordOptions);
             var response = await _embedService.EmbedAsync(request).ConfigureAwait(true);
 
             ResultMessage = $"Embed complete: {response.BytesEmbedded} B written to '{response.OutputPath}' via {response.CarrierFormatId}.";
@@ -112,5 +207,26 @@ public sealed class EmbedViewModel : ViewModelBase
             ResultMessage = $"Embed failed: {ex.Message}";
             StatusChanged?.Invoke(this, "Embed failed.");
         }
+    }
+
+    private void Validate()
+    {
+        var result = _validationService.ValidateEmbed(CarrierPath, PayloadPath, OutputPath, RequireEncryption, Password, AllowOverwrite);
+        ApplyValidationResult(result);
+    }
+
+    private void ApplyValidationResult(OperationValidationResult result)
+    {
+        SetErrors(nameof(CarrierPath), result.Issues.Where(static x => x.PropertyName == nameof(CarrierPath)).Select(static x => x.Message));
+        SetErrors(nameof(PayloadPath), result.Issues.Where(static x => x.PropertyName == nameof(PayloadPath)).Select(static x => x.Message));
+        SetErrors(nameof(OutputPath), result.Issues.Where(static x => x.PropertyName == nameof(OutputPath)).Select(static x => x.Message));
+        SetErrors(nameof(Password), result.Issues.Where(static x => x.PropertyName == nameof(Password)).Select(static x => x.Message));
+    }
+
+    private void RaiseCommandCanExecuteChanged()
+    {
+        _checkCapacityCommand.RaiseCanExecuteChanged();
+        _getInfoCommand.RaiseCanExecuteChanged();
+        _embedCommand.RaiseCanExecuteChanged();
     }
 }
