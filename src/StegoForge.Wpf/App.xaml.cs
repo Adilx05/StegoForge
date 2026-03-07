@@ -1,7 +1,6 @@
 using System;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
-using StegoForge.Application;
 using StegoForge.Wpf.ViewModels;
 
 namespace StegoForge.Wpf;
@@ -30,7 +29,7 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
-        services.AddStegoForgeApplicationServices();
+        global::StegoForge.Application.ApplicationServiceCollectionExtensions.AddStegoForgeApplicationServices(services);
 
         services.AddSingleton<MainWindowViewModel>();
         services.AddTransient<EmbedViewModel>();
