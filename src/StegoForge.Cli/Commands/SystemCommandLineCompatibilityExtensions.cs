@@ -13,6 +13,9 @@ internal static class SystemCommandLineCompatibilityExtensions
     public static void AddAlias(this Command command, string alias)
         => command.Aliases.Add(alias);
 
+    public static void AddAlias(this Option option, string alias)
+        => option.Aliases.Add(alias);
+
     public static T? GetValueForOption<T>(this ParseResult parseResult, Option<T> option)
         => parseResult.GetValue(option);
 }

@@ -32,8 +32,8 @@ public sealed class ExtractCommand(IExtractService extractService)
         {
             var carrierPath = parseResult.GetValueForOption(carrierOption)!;
             var outputPath = parseResult.GetValueForOption(outputOption)!;
-            var encrypt = parseResult.GetValueForOption(encryptOption)!;
-            var compress = parseResult.GetValueForOption(compressOption)!;
+            var encrypt = parseResult.GetValueForOption(encryptOption) ?? "optional";
+            var compress = parseResult.GetValueForOption(compressOption) ?? "auto";
             var password = parseResult.GetValueForOption(passwordOption);
             var json = parseResult.GetValueForOption(jsonOption);
             var quiet = parseResult.GetValueForOption(quietOption);

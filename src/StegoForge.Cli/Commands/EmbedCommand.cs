@@ -35,8 +35,8 @@ public sealed class EmbedCommand(IEmbedService embedService)
             var carrierPath = parseResult.GetValueForOption(carrierOption)!;
             var payloadPath = parseResult.GetValueForOption(payloadOption)!;
             var outputPath = parseResult.GetValueForOption(outputOption)!;
-            var encrypt = parseResult.GetValueForOption(encryptOption)!;
-            var compress = parseResult.GetValueForOption(compressOption)!;
+            var encrypt = parseResult.GetValueForOption(encryptOption) ?? "optional";
+            var compress = parseResult.GetValueForOption(compressOption) ?? "auto";
             var password = parseResult.GetValueForOption(passwordOption);
             var json = parseResult.GetValueForOption(jsonOption);
             var quiet = parseResult.GetValueForOption(quietOption);

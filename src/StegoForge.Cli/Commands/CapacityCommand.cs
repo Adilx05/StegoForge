@@ -10,7 +10,7 @@ public sealed class CapacityCommand(ICapacityService capacityService)
         var command = new Command("capacity", "Estimate available capacity for a carrier file.\nExample: stegoforge capacity --carrier in.png --payload 2048 --json");
 
         var carrierOption = CommonCliOptions.CarrierPathOption();
-        var payloadOption = new Option<long>("--payload", getDefaultValue: _ => 0L, "Payload size in bytes to evaluate against capacity.");
+        var payloadOption = new Option<long>("--payload", "Payload size in bytes to evaluate against capacity.");
         payloadOption.AddAlias("-p");
 
         var encryptOption = CommonCliOptions.EncryptOption();
@@ -31,8 +31,8 @@ public sealed class CapacityCommand(ICapacityService capacityService)
         {
             var carrierPath = parseResult.GetValueForOption(carrierOption)!;
             var payloadSize = parseResult.GetValueForOption(payloadOption);
-            var encrypt = parseResult.GetValueForOption(encryptOption)!;
-            var compress = parseResult.GetValueForOption(compressOption)!;
+            var encrypt = parseResult.GetValueForOption(encryptOption) ?? "optional";
+            var compress = parseResult.GetValueForOption(compressOption) ?? "auto";
             var json = parseResult.GetValueForOption(jsonOption);
             var quiet = parseResult.GetValueForOption(quietOption);
             var verbose = parseResult.GetValueForOption(verboseOption);

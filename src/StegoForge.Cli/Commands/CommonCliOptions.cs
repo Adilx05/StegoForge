@@ -26,10 +26,10 @@ internal static class CommonCliOptions
     }
 
     public static Option<string> EncryptOption()
-        => new("--encrypt", getDefaultValue: _ => "optional", "Encryption mode: none|optional|required.");
+        => new("--encrypt", "Encryption mode: none|optional|required.");
 
     public static Option<string> CompressOption()
-        => new("--compress", getDefaultValue: _ => "auto", "Compression mode: off|auto|on.");
+        => new("--compress", "Compression mode: off|auto|on.");
 
     public static Option<string?> PasswordOption()
         => new("--password", "Password value used for encryption/decryption.");

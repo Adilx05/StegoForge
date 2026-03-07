@@ -27,8 +27,8 @@ public sealed class InfoCommand(IInfoService infoService)
         command.SetAction(async parseResult =>
         {
             var carrierPath = parseResult.GetValueForOption(carrierOption)!;
-            var encrypt = parseResult.GetValueForOption(encryptOption)!;
-            var compress = parseResult.GetValueForOption(compressOption)!;
+            var encrypt = parseResult.GetValueForOption(encryptOption) ?? "optional";
+            var compress = parseResult.GetValueForOption(compressOption) ?? "auto";
             var json = parseResult.GetValueForOption(jsonOption);
             var quiet = parseResult.GetValueForOption(quietOption);
             var verbose = parseResult.GetValueForOption(verboseOption);
