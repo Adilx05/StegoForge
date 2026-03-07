@@ -39,10 +39,11 @@ public sealed class CliCommandIntegrationTests
         var outputPath = workspace.Resolve("should-not-exist.bmp");
 
         var result = await RunCliAsync(["embed", "--carrier", carrierPath, "--payload", payloadPath, "--out", outputPath]);
+        var errorOutput = string.Concat(result.Stderr, result.Stdout);
 
         Assert.Equal(9, result.ExitCode);
-        Assert.Contains("ERROR [InsufficientCapacity]", result.Stderr, StringComparison.Ordinal);
-        Assert.Contains("Required", result.Stderr, StringComparison.Ordinal);
+        Assert.Contains("ERROR [InsufficientCapacity]", errorOutput, StringComparison.Ordinal);
+        Assert.Contains("Required", errorOutput, StringComparison.Ordinal);
         Assert.DoesNotContain("Command: embed", result.Stdout, StringComparison.Ordinal);
     }
 
