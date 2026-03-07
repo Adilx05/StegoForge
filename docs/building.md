@@ -104,6 +104,27 @@ When changing WAV handler behavior, run these targeted commands before broader s
 
 These commands verify deterministic capacity boundaries, WAV embed/extract round-trip reliability (baseline/compressed/encrypted), and strict unsupported-format/invalid-header handling.
 
+## CLI-focused build/test
+
+```bash
+# Build CLI app and CLI test project only
+ dotnet build src/StegoForge.Cli/StegoForge.Cli.csproj
+ dotnet build tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
+
+# Run all CLI tests
+ dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
+
+# Targeted command-surface suites: help discoverability + version
+ dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~HelpFlag_IsDiscoverable_AndPrintsCommandCatalog|FullyQualifiedName~HelpCommand_IsDiscoverable|FullyQualifiedName~Version_Command_IsDiscoverable"
+
+# Targeted command-surface suites: exit-code determinism
+ dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~EmbedCommand_ReturnsMappedFailureCodeAndStableStderrFormat|FullyQualifiedName~ExtractCommand_ReturnsMappedFailureCode|FullyQualifiedName~CapacityCommand_ReturnsMappedFailureCode|FullyQualifiedName~InfoCommand_ReturnsMappedFailureCode|FullyQualifiedName~ParserError_MissingRequiredOptions_ReturnsInvalidArgumentsCodeAndStableMessageShape|FullyQualifiedName~ParserError_InvalidEnumValue_ReturnsInvalidArgumentsCodeAndStableMessageShape|FullyQualifiedName~ParserError_InvalidFileArgument_ReturnsInvalidArgumentsCodeAndStableMessageShape"
+
+# Targeted command-surface suites: JSON success/failure contracts
+ dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~InfoCommand_JsonSuccess_EmitsStableContractFields|FullyQualifiedName~CapacityCommand_JsonFailure_EmitsStableErrorShapeAndExitCode|FullyQualifiedName~ParserError_WithJsonFlag_EmitsJsonErrorShape|FullyQualifiedName~Info_ReportsMetadataPresenceAndAbsence_AsJson"
+```
+
+
 ## WPF-only build/test
 
 > Recommended on Windows with desktop workloads installed.

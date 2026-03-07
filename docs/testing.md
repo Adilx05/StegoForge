@@ -31,6 +31,55 @@
  dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
 ```
 
+
+## CLI contract test matrix
+
+Use the CLI test project as the acceptance source for command-surface behavior:
+
+- Project: `tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj`
+- Run everything: `dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj`
+
+### Help discoverability
+
+- `HelpFlag_IsDiscoverable_AndPrintsCommandCatalog`
+- `HelpCommand_IsDiscoverable`
+- `Version_Command_IsDiscoverable`
+
+Filter command:
+
+```bash
+ dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~HelpFlag_IsDiscoverable_AndPrintsCommandCatalog|FullyQualifiedName~HelpCommand_IsDiscoverable|FullyQualifiedName~Version_Command_IsDiscoverable"
+```
+
+### Exit-code determinism
+
+- `EmbedCommand_ReturnsMappedFailureCodeAndStableStderrFormat`
+- `ExtractCommand_ReturnsMappedFailureCode`
+- `CapacityCommand_ReturnsMappedFailureCode`
+- `InfoCommand_ReturnsMappedFailureCode`
+- `ParserError_MissingRequiredOptions_ReturnsInvalidArgumentsCodeAndStableMessageShape`
+- `ParserError_InvalidEnumValue_ReturnsInvalidArgumentsCodeAndStableMessageShape`
+- `ParserError_InvalidFileArgument_ReturnsInvalidArgumentsCodeAndStableMessageShape`
+
+Filter command:
+
+```bash
+ dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~EmbedCommand_ReturnsMappedFailureCodeAndStableStderrFormat|FullyQualifiedName~ExtractCommand_ReturnsMappedFailureCode|FullyQualifiedName~CapacityCommand_ReturnsMappedFailureCode|FullyQualifiedName~InfoCommand_ReturnsMappedFailureCode|FullyQualifiedName~ParserError_MissingRequiredOptions_ReturnsInvalidArgumentsCodeAndStableMessageShape|FullyQualifiedName~ParserError_InvalidEnumValue_ReturnsInvalidArgumentsCodeAndStableMessageShape|FullyQualifiedName~ParserError_InvalidFileArgument_ReturnsInvalidArgumentsCodeAndStableMessageShape"
+```
+
+### JSON output behavior
+
+- `InfoCommand_JsonSuccess_EmitsStableContractFields`
+- `CapacityCommand_JsonFailure_EmitsStableErrorShapeAndExitCode`
+- `ParserError_WithJsonFlag_EmitsJsonErrorShape`
+- `Info_ReportsMetadataPresenceAndAbsence_AsJson`
+
+Filter command:
+
+```bash
+ dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~InfoCommand_JsonSuccess_EmitsStableContractFields|FullyQualifiedName~CapacityCommand_JsonFailure_EmitsStableErrorShapeAndExitCode|FullyQualifiedName~ParserError_WithJsonFlag_EmitsJsonErrorShape|FullyQualifiedName~Info_ReportsMetadataPresenceAndAbsence_AsJson"
+```
+
 ## Payload Envelope v1
 
 Acceptance criteria traceability for `PayloadEnvelopeSerializerTests`:

@@ -2,12 +2,94 @@
 
 The CLI app (`src/StegoForge.Cli`) provides scriptable steganography workflows.
 
-## Commands
+## Canonical syntax
 
-- `embed` — hide payload data inside a carrier.
-- `extract` — recover payload from an encoded carrier.
-- `capacity` — estimate available payload size for a given carrier.
-- `info` — inspect carrier and embedded metadata (when available).
+```bash
+stegoforge <command> [options]
+```
+
+Commands:
+
+- `embed`
+- `extract`
+- `capacity`
+- `info`
+- `version`
+- `help` (alias to root `--help`)
+
+## Commands and examples
+
+### `embed`
+
+Syntax:
+
+```bash
+stegoforge embed --carrier <carrier-path> --payload <payload-path> --out <output-path> [--encrypt none|optional|required] [--compress off|auto|on] [--password <value>] [--json] [--quiet|--verbose]
+```
+
+Examples:
+
+```bash
+stegoforge embed --carrier in.png --payload secret.bin --out out.png
+stegoforge embed --carrier in.png --payload secret.bin --out out.png --encrypt required --password "correct horse"
+stegoforge embed --carrier in.png --payload secret.bin --out out.png --compress auto --json
+```
+
+### `extract`
+
+Syntax:
+
+```bash
+stegoforge extract --carrier <carrier-path> --out <output-path> [--encrypt none|optional|required] [--compress off|auto|on] [--password <value>] [--json] [--quiet|--verbose]
+```
+
+Examples:
+
+```bash
+stegoforge extract --carrier out.png --out recovered.bin
+stegoforge extract --carrier out.png --out recovered.bin --password "correct horse"
+stegoforge extract --carrier out.png --out recovered.bin --json
+```
+
+### `capacity`
+
+Syntax:
+
+```bash
+stegoforge capacity --carrier <carrier-path> --payload <bytes> [--encrypt none|optional|required] [--compress off|auto|on] [--json] [--quiet|--verbose]
+```
+
+Examples:
+
+```bash
+stegoforge capacity --carrier in.png --payload 1024
+stegoforge capacity --carrier in.wav --payload 65536 --compress auto
+stegoforge capacity --carrier in.png --payload 2048 --json
+```
+
+### `info`
+
+Syntax:
+
+```bash
+stegoforge info --carrier <carrier-path> [--encrypt none|optional|required] [--compress off|auto|on] [--json] [--quiet|--verbose]
+```
+
+Examples:
+
+```bash
+stegoforge info --carrier out.png
+stegoforge info --carrier out.png --json
+```
+
+### `version` and `help`
+
+```bash
+stegoforge version
+stegoforge version --json
+stegoforge help
+stegoforge --help
+```
 
 ## Output modes
 
@@ -92,6 +174,14 @@ For command failures (including parser errors), JSON mode writes this object to 
 
 This shape is stable for automation.
 
+
+### JSON mode contract notes
+
+- On **successful command execution** with `--json`, the CLI writes a single JSON object to `stdout` and returns exit code `0`.
+- On **command failure** with `--json`, the CLI writes a single error JSON object to `stderr` and returns a non-zero mapped exit code.
+- On **parser/validation failures** with `--json` (for example missing required options or invalid enum values), the same JSON error shape is emitted to `stderr` with exit code `3` (`InvalidArguments`).
+- JSON mode is intended for automation: consumers should branch by process exit code, then parse `stdout` on success and `stderr` on failure.
+
 ## Automation notes
 
 - Check process exit code first.
@@ -109,19 +199,18 @@ else
 fi
 ```
 
-## Exit-code mapping
+## Exit-code table
 
-| `StegoErrorCode` | CLI exit code |
+| Condition | CLI exit code |
 | --- | --- |
-| `FileNotFound` | `2` |
-| `InvalidArguments` | `3` |
-| `CorruptedData` | `4` |
-| `UnsupportedFormat` | `5` |
-| `InvalidPayload` | `6` |
-| `InvalidHeader` | `7` |
-| `WrongPassword` | `8` |
-| `InsufficientCapacity` | `9` |
-| `OutputAlreadyExists` | `10` |
-| `InternalProcessingFailure` | `1` |
-
-Exit code `0` is reserved for success.
+| Success | `0` |
+| `StegoErrorCode.InternalProcessingFailure` | `1` |
+| `StegoErrorCode.FileNotFound` | `2` |
+| `StegoErrorCode.InvalidArguments` (including parser errors) | `3` |
+| `StegoErrorCode.CorruptedData` | `4` |
+| `StegoErrorCode.UnsupportedFormat` | `5` |
+| `StegoErrorCode.InvalidPayload` | `6` |
+| `StegoErrorCode.InvalidHeader` | `7` |
+| `StegoErrorCode.WrongPassword` | `8` |
+| `StegoErrorCode.InsufficientCapacity` | `9` |
+| `StegoErrorCode.OutputAlreadyExists` | `10` |
