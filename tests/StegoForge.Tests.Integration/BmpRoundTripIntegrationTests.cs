@@ -94,7 +94,7 @@ public sealed class BmpRoundTripIntegrationTests
         stegoCarrier.Position = 0;
         using var image = await Image.LoadAsync<Rgba32>(stegoCarrier);
 
-        Span<byte> header = stackalloc byte[sizeof(int)];
+        var header = new byte[sizeof(int)];
         BinaryPrimitives.WriteInt32BigEndian(header, corruptedLength);
         var bitIndex = 0;
 

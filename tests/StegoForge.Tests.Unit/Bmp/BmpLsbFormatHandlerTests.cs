@@ -159,7 +159,7 @@ public sealed class BmpLsbFormatHandlerTests
 
         using var image = await Image.LoadAsync<Rgba32>(carrier);
 
-        Span<byte> header = stackalloc byte[sizeof(int)];
+        var header = new byte[sizeof(int)];
         BinaryPrimitives.WriteInt32BigEndian(header, payloadLength);
         var bitIndex = 0;
 
