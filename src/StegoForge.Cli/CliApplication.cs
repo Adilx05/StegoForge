@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
+using StegoForge.Application.Diagnostics;
 using StegoForge.Cli.Commands;
 using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
@@ -51,7 +52,9 @@ public static class CliApplication
                 ? (IOutputFormatter)new JsonOutputFormatter(Console.Out, errorWriter ?? Console.Error)
                 : new TextOutputFormatter(Console.Out, errorWriter ?? Console.Error);
 
-            await formatter.WriteFailureAsync(new CliCommandFailure(exitCode, parserError)).ConfigureAwait(false);
+            var diagnostics = DiagnosticContext.Create(ResolveOperationType(args), "unknown");
+            var sanitized = SanitizedErrorDiagnostics.From(parserError, diagnostics);
+            await formatter.WriteFailureAsync(new CliCommandFailure(exitCode, parserError, sanitized.ToCliText(), sanitized)).ConfigureAwait(false);
             return exitCode;
         }
 
@@ -60,4 +63,19 @@ public static class CliApplication
 
     private static bool HasJsonFlag(string[] args)
         => args.Any(static arg => string.Equals(arg, "--json", StringComparison.OrdinalIgnoreCase));
+
+    private static string ResolveOperationType(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            return "root";
+        }
+
+        var first = args[0].Trim().ToLowerInvariant();
+        return first switch
+        {
+            "embed" or "extract" or "capacity" or "info" or "version" or "help" => first,
+            _ => "root"
+        };
+    }
 }

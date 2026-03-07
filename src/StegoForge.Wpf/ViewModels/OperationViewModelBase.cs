@@ -1,3 +1,4 @@
+using StegoForge.Application.Diagnostics;
 using StegoForge.Core.Errors;
 
 namespace StegoForge.Wpf.ViewModels;
@@ -48,9 +49,11 @@ public abstract class OperationViewModelBase : ViewModelBase
         ProgressText = "Idle";
     }
 
-    protected void SetMappedError(StegoError error)
+    protected SanitizedErrorDiagnostics SetMappedError(StegoError error, DiagnosticContext diagnostics)
     {
-        LastErrorCode = error.Code.ToString();
-        LastErrorMessage = error.Message;
+        var sanitized = SanitizedErrorDiagnostics.From(error, diagnostics);
+        LastErrorCode = sanitized.ErrorCode;
+        LastErrorMessage = sanitized.ToWpfMessage();
+        return sanitized;
     }
 }

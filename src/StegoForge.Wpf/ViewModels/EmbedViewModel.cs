@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using StegoForge.Core.Abstractions;
+using StegoForge.Application.Diagnostics;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
 using StegoForge.Wpf.Services;
@@ -284,11 +285,12 @@ public sealed class EmbedViewModel : OperationViewModelBase
         catch (Exception ex)
         {
             var mapped = StegoErrorMapper.FromException(ex);
-            SetMappedError(mapped);
-            ResultMessage = $"Embed failed ({mapped.Code}): {mapped.Message}";
+            var diagnostics = DiagnosticContext.Create("embed", DeriveCarrierFormatHint(CarrierPath));
+            var sanitized = SetMappedError(mapped, diagnostics);
+            ResultMessage = $"Embed failed ({sanitized.ErrorCode}). Correlation ID: {sanitized.CorrelationId}";
             StatusMessage = "Embed failed.";
             ProgressText = "Failed";
-            _notificationService.ShowError("Embed failed", ResultMessage);
+            _notificationService.ShowError("Embed failed", sanitized.ToWpfMessage());
             StatusChanged?.Invoke(this, StatusMessage);
         }
         finally
@@ -332,6 +334,17 @@ public sealed class EmbedViewModel : OperationViewModelBase
 
         var directory = Path.GetDirectoryName(path);
         return !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory);
+    }
+
+    private static string DeriveCarrierFormatHint(string? carrierPath)
+    {
+        if (string.IsNullOrWhiteSpace(carrierPath))
+        {
+            return "unknown";
+        }
+
+        var extension = Path.GetExtension(carrierPath).TrimStart('.').ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(extension) ? "unknown" : extension;
     }
 
     private void RaiseCommandCanExecuteChanged()

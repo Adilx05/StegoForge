@@ -1,5 +1,4 @@
 using System.Text.Json;
-using StegoForge.Core.Errors;
 
 namespace StegoForge.Cli.Output;
 
@@ -15,13 +14,23 @@ internal sealed class JsonOutputFormatter(TextWriter stdout, TextWriter stderr) 
         var payload = new CliErrorOutput(
             Type: "error",
             ExitCode: failure.ExitCode,
-            Code: failure.Error.Code.ToString(),
-            Message: failure.Error.Message);
+            Code: failure.Diagnostics.ErrorCode,
+            Message: failure.Diagnostics.Message,
+            OperationType: failure.Diagnostics.OperationType,
+            CarrierFormat: failure.Diagnostics.CarrierFormat,
+            CorrelationId: failure.Diagnostics.CorrelationId);
 
         await stderr.WriteLineAsync(JsonSerializer.Serialize(payload, JsonOptions)).ConfigureAwait(false);
     }
 
-    private sealed record CliErrorOutput(string Type, int ExitCode, string Code, string Message);
+    private sealed record CliErrorOutput(
+        string Type,
+        int ExitCode,
+        string Code,
+        string Message,
+        string OperationType,
+        string CarrierFormat,
+        string CorrelationId);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

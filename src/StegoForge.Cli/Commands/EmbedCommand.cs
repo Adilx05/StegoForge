@@ -1,4 +1,5 @@
 using System.CommandLine;
+using StegoForge.Application.Diagnostics;
 using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
@@ -43,6 +44,8 @@ public sealed class EmbedCommand(IEmbedService embedService)
             var quiet = parseResult.GetValueForOption(quietOption);
             var verbose = parseResult.GetValueForOption(verboseOption);
 
+            var diagnostics = DiagnosticContext.Create("embed", CommandExecution.DeriveCarrierFormatHint(carrierPath));
+
             return await CommandExecution.ExecuteAsync(async cancellationToken =>
             {
                 var payloadBytes = await File.ReadAllBytesAsync(payloadPath, cancellationToken).ConfigureAwait(false);
@@ -61,7 +64,7 @@ public sealed class EmbedCommand(IEmbedService embedService)
                     PayloadSizeBytes: response.PayloadSizeBytes,
                     BytesEmbedded: response.BytesEmbedded,
                     Diagnostics: response.Diagnostics);
-            }, json).ConfigureAwait(false);
+            }, json, diagnostics).ConfigureAwait(false);
         });
 
         return command;

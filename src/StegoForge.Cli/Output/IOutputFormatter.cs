@@ -1,3 +1,4 @@
+using StegoForge.Application.Diagnostics;
 using StegoForge.Core.Errors;
 
 namespace StegoForge.Cli.Output;
@@ -14,4 +15,4 @@ internal interface ICommandOutput
     IReadOnlyList<string> ToTextLines();
 }
 
-internal sealed record CliCommandFailure(int ExitCode, StegoError Error);
+internal sealed record CliCommandFailure(int ExitCode, StegoError Error, string Message, SanitizedErrorDiagnostics Diagnostics);

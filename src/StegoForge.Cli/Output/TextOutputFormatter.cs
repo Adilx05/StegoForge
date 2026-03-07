@@ -1,5 +1,3 @@
-using StegoForge.Cli;
-
 namespace StegoForge.Cli.Output;
 
 internal sealed class TextOutputFormatter(TextWriter stdout, TextWriter stderr) : IOutputFormatter
@@ -14,6 +12,6 @@ internal sealed class TextOutputFormatter(TextWriter stdout, TextWriter stderr) 
 
     public async Task WriteFailureAsync(CliCommandFailure failure, CancellationToken cancellationToken = default)
     {
-        await stderr.WriteLineAsync(CliErrorContract.FormatError(failure.Error)).ConfigureAwait(false);
+        await stderr.WriteLineAsync(failure.Message).ConfigureAwait(false);
     }
 }
