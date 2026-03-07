@@ -12,6 +12,8 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -20,19 +22,31 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Carrier file" />
-        <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" Text="{Binding CarrierPath, UpdateSourceTrigger=PropertyChanged}" />
+        <StackPanel Grid.Row="0" Grid.Column="1">
+            <TextBox x:Name="CarrierPathTextBox" Margin="0,0,0,2" Text="{Binding CarrierPath, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+            <TextBlock Foreground="IndianRed" FontSize="11" Text="{Binding ElementName=CarrierPathTextBox, Path=(Validation.Errors)[0].ErrorContent}" />
+        </StackPanel>
 
         <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Output folder/file" />
-        <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}" />
+        <StackPanel Grid.Row="1" Grid.Column="1">
+            <TextBox x:Name="OutputPathTextBox" Margin="0,0,0,2" Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+            <TextBlock Foreground="IndianRed" FontSize="11" Text="{Binding ElementName=OutputPathTextBox, Path=(Validation.Errors)[0].ErrorContent}" />
+        </StackPanel>
 
-        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Password (optional)" />
-        <TextBox Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Password" />
+        <StackPanel Grid.Row="2" Grid.Column="1">
+            <TextBox x:Name="PasswordTextBox" Margin="0,0,0,2" Text="{Binding Password, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+            <TextBlock Foreground="IndianRed" FontSize="11" Text="{Binding ElementName=PasswordTextBox, Path=(Validation.Errors)[0].ErrorContent}" />
+        </StackPanel>
 
-        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+        <CheckBox Grid.Row="3" Grid.Column="1" Margin="0,4,0,4" Content="Require encryption" IsChecked="{Binding RequireEncryption}" />
+        <CheckBox Grid.Row="4" Grid.Column="1" Margin="0,0,0,8" Content="Allow overwrite existing output" IsChecked="{Binding AllowOverwrite}" />
+
+        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
             <Button Content="Extract" Width="120" Command="{Binding ExtractCommand}" />
         </StackPanel>
 
-        <TextBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+        <TextBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"
                  Text="{Binding ResultMessage}"
                  IsReadOnly="True"
                  TextWrapping="Wrap"
