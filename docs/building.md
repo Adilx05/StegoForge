@@ -223,6 +223,44 @@ StegoForge release operations follow SemVer and are executed via `.github/workfl
   - `tag == v{version}`
 
 
+### Operator runbook (release cut)
+
+1. **Create and push the release tag** (after checklist completion and final `CHANGELOG.md` review):
+
+```bash
+git checkout main
+git pull --ff-only
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin vX.Y.Z
+```
+
+2. **Dispatch and monitor the release workflow** in `.github/workflows/release.yml`:
+
+- Open GitHub Actions → **Release** workflow.
+- Run workflow with:
+  - `tag`: `vX.Y.Z`
+  - `version`: `X.Y.Z`
+  - `changelog_summary`: summary that matches `CHANGELOG.md`.
+- Confirm jobs complete successfully in order:
+  - `package-cli`
+  - `package-wpf`
+  - `publish-release`
+
+3. **Validate uploaded artifacts and signatures** from the published release:
+
+- Verify required assets exist:
+  - `stegoforge-cli-vX.Y.Z-linux-x64.tar.gz`
+  - `stegoforge-cli-vX.Y.Z-linux-x64.sha256`
+  - `stegoforge-cli-vX.Y.Z-linux-x64.tar.gz.sig`
+  - `stegoforge-cli-vX.Y.Z-linux-x64.sha256.sig`
+  - `stegoforge-wpf-vX.Y.Z-windows-x64.zip`
+  - `stegoforge-wpf-vX.Y.Z-windows-x64.sha256`
+  - `stegoforge-wpf-vX.Y.Z-windows-x64.zip.sig`
+  - `stegoforge-wpf-vX.Y.Z-windows-x64.sha256.sig`
+  - `stegoforge-cosign.pub`
+- Run checksum verification commands and cosign verification commands from [Artifact verification](#artifact-verification-consumer-workflow).
+- Record release evidence: workflow run URL, successful verification command output, and asset list snapshot in release operations notes.
+
 ### Artifact verification (consumer workflow)
 
 Download release assets for the target tag, including `stegoforge-cosign.pub`, then verify checksums and signatures before extraction/execution.

@@ -66,6 +66,42 @@ Do **not** cut/publish a release when any of the following conditions hold:
 - The Windows WPF lane (`wpf` job) is not green.
 - Required CI status checks are not successful for the commit being released.
 
+### Release Candidate (RC) checklist (before tagging)
+
+Run the following workflow and command evidence checklist on the exact commit that will receive the tag:
+
+- [ ] Confirm `CHANGELOG.md` has the target version section and migration notes.
+  - Evidence: diff/review of `CHANGELOG.md` for `## X.Y.Z` section.
+- [ ] Confirm the CI workflow `.github/workflows/ci.yml` is green for required jobs.
+  - Evidence: successful run for `core-cli` (both `ubuntu-latest` and `windows-latest`) and `wpf` (`windows-latest`).
+
+Execute (or verify equivalent CI execution records for) the following commands:
+
+```bash
+dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --filter "Category=Hardening&Campaign!=Fuzz-Full"
+dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --filter "Category=Hardening&Campaign!=Fuzz-Full"
+```
+
+```powershell
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "FullyQualifiedName~WpfCommandFlowTests"
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "Category=Hardening"
+```
+
+- [ ] Capture workflow evidence required before creating a release tag:
+  - [ ] `.github/workflows/ci.yml` run URL attached to release notes draft.
+  - [ ] Uploaded CI artifacts present: `test-results-core-cli-ubuntu-latest`, `test-results-core-cli-windows-latest`, `test-results-wpf-windows-latest`.
+  - [ ] No failed steps in `Hardening suite (bounded; PR/push)` and `Test WPF hardening subset (Windows)`.
+- [ ] Confirm release workflow readiness in `.github/workflows/release.yml` inputs:
+  - [ ] `tag` format `vX.Y.Z`.
+  - [ ] `version` format `X.Y.Z` where `tag == v{version}`.
+  - [ ] `changelog_summary` is non-empty and matches `CHANGELOG.md` highlights.
+
+Only create the Git tag after all checklist items above are complete.
+
 ### CI mapping for documented test commands
 
 | Documented command | CI workflow job/step |
