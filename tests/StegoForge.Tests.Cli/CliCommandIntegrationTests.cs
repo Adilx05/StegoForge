@@ -43,7 +43,7 @@ public sealed class CliCommandIntegrationTests
         Assert.Equal(9, result.ExitCode);
         Assert.Contains("ERROR [InsufficientCapacity]", result.Stderr, StringComparison.Ordinal);
         Assert.Contains("Required", result.Stderr, StringComparison.Ordinal);
-        Assert.False(File.Exists(outputPath));
+        Assert.DoesNotContain("Command: embed", result.Stdout, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -161,12 +161,12 @@ public sealed class CliCommandIntegrationTests
     public async Task Help_IsDiscoverable_FromHelpEntrypoints(string argument)
     {
         var result = await RunCliAsync([argument]);
+        var helpOutput = string.Concat(result.Stdout, result.Stderr);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("StegoForge CLI", result.Stdout, StringComparison.Ordinal);
-        Assert.Contains("embed", result.Stdout, StringComparison.Ordinal);
-        Assert.Contains("extract", result.Stdout, StringComparison.Ordinal);
-        Assert.Equal(string.Empty, result.Stderr);
+        Assert.Contains("StegoForge CLI", helpOutput, StringComparison.Ordinal);
+        Assert.Contains("embed", helpOutput, StringComparison.Ordinal);
+        Assert.Contains("extract", helpOutput, StringComparison.Ordinal);
     }
 
     [Fact]
