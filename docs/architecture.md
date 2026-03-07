@@ -87,6 +87,22 @@ Unsupported PNG modes are intentionally fail-fast and deterministic:
 - `GetCapacityAsync`, `EmbedAsync`, `ExtractAsync`, and `GetInfoAsync` call shared validation and throw `UnsupportedFormatException` when input violates PNG v1 policy,
 - deterministic policy checks are locked by unit tests (`Supports_ReturnsFalse_ForUnsupportedGrayscaleColorType`, `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedColorType`).
 
+## BMP handler v1 scope and unsupported-mode behavior
+
+`BmpLsbFormatHandler` (`src/StegoForge.Formats/Bmp/BmpLsbFormatHandler.cs`) defines `bmp-lsb-v1` as a narrow, explicit subset of BMP:
+
+- supported carriers are BMP files with valid `BM` signature + `BITMAPINFOHEADER`-compatible metadata,
+- supported pixel modes are only 24-bit BGR and 32-bit BGRA,
+- supported compression is `BI_RGB` for 24-bit and `BI_RGB` or `BI_BITFIELDS` for 32-bit (all uncompressed pixel layouts),
+- embedding uses RGB channel LSBs only; alpha is preserved and not used for payload bits.
+
+Unsupported combinations are fail-fast and deterministic:
+
+- `Supports(...)` / `CanHandleAsync(...)` return `false` when the file is not BMP v1-compatible,
+- operational calls (`GetCapacityAsync`, `EmbedAsync`, `ExtractAsync`, `GetInfoAsync`) throw typed exceptions with actionable diagnostics,
+- unsupported bit depth/compression throw `UnsupportedFormatException` with detected mode + supported set,
+- malformed BMP headers throw `InvalidHeaderException` (for example truncated headers or invalid dimensions).
+
 ## Provider selection strategy and fallback behavior
 
 Application orchestration should resolve providers through deterministic selection rules so behavior is predictable across CLI and GUI:
