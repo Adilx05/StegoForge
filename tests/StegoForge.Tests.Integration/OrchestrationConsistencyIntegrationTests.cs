@@ -175,7 +175,7 @@ public sealed class OrchestrationConsistencyIntegrationTests
 
         Assert.Equal(StegoErrorCode.WrongPassword, StegoErrorMapper.FromException(wrongPasswordException).Code);
 
-        await TamperCarrierAsync(stegoPath, tamperedPath);
+        await TamperCarrierAsync(carrierType, stegoPath, tamperedPath);
 
         var tamperException = await Assert.ThrowsAnyAsync<StegoForgeException>(() =>
             extractService.ExtractAsync(new ExtractRequest(
@@ -374,12 +374,93 @@ public sealed class OrchestrationConsistencyIntegrationTests
         return payload;
     }
 
-    private static async Task TamperCarrierAsync(string sourcePath, string targetPath)
+    private static async Task TamperCarrierAsync(CarrierType carrierType, string sourcePath, string targetPath)
+    {
+        const int encryptedPayloadBitIndex = 40;
+
+        switch (carrierType)
+        {
+            case CarrierType.Png:
+                await TamperImageCarrierAsync(sourcePath, targetPath, encryptedPayloadBitIndex, saveAsPng: true);
+                break;
+            case CarrierType.Bmp:
+                await TamperImageCarrierAsync(sourcePath, targetPath, encryptedPayloadBitIndex, saveAsPng: false);
+                break;
+            case CarrierType.Wav:
+                await TamperWavCarrierAsync(sourcePath, targetPath, encryptedPayloadBitIndex);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(carrierType), carrierType, "Unsupported test carrier type.");
+        }
+    }
+
+    private static async Task TamperImageCarrierAsync(string sourcePath, string targetPath, int bitIndex, bool saveAsPng)
+    {
+        using var image = await Image.LoadAsync<Rgba32>(sourcePath);
+
+        var pixelIndex = bitIndex / 3;
+        var channelIndex = bitIndex % 3;
+        var x = pixelIndex % image.Width;
+        var y = pixelIndex / image.Width;
+
+        var pixel = image[x, y];
+        switch (channelIndex)
+        {
+            case 0:
+                pixel.R ^= 0x01;
+                break;
+            case 1:
+                pixel.G ^= 0x01;
+                break;
+            default:
+                pixel.B ^= 0x01;
+                break;
+        }
+
+        image[x, y] = pixel;
+
+        if (saveAsPng)
+        {
+            await image.SaveAsPngAsync(targetPath, new PngEncoder());
+            return;
+        }
+
+        await image.SaveAsBmpAsync(targetPath, new BmpEncoder { BitsPerPixel = BmpBitsPerPixel.Pixel24 });
+    }
+
+    private static async Task TamperWavCarrierAsync(string sourcePath, string targetPath, int bitIndex)
     {
         var bytes = await File.ReadAllBytesAsync(sourcePath);
-        var index = Math.Max(0, bytes.Length / 2);
-        bytes[index] ^= 0x01;
+        var dataChunkOffset = FindWavDataChunkOffset(bytes);
+        var lowByteOffset = checked(dataChunkOffset + (bitIndex * 2));
+
+        if (lowByteOffset >= bytes.Length)
+        {
+            throw new InvalidOperationException("Computed WAV tamper offset is outside file bounds.");
+        }
+
+        bytes[lowByteOffset] ^= 0x01;
         await File.WriteAllBytesAsync(targetPath, bytes);
+    }
+
+    private static int FindWavDataChunkOffset(byte[] bytes)
+    {
+        var cursor = 12;
+
+        while (cursor + 8 <= bytes.Length)
+        {
+            var chunkSize = BitConverter.ToInt32(bytes, cursor + 4);
+            var chunkDataOffset = cursor + 8;
+
+            if (bytes[cursor] == (byte)'d' && bytes[cursor + 1] == (byte)'a' && bytes[cursor + 2] == (byte)'t' && bytes[cursor + 3] == (byte)'a')
+            {
+                return chunkDataOffset;
+            }
+
+            cursor = checked(chunkDataOffset + chunkSize + (chunkSize % 2));
+        }
+
+        throw new InvalidDataException("WAV data chunk was not found for tampering.");
     }
 
     private static string GetFormatId(CarrierType type)
