@@ -32,6 +32,22 @@
 ```
 
 
+## WPF smoke test scope
+
+`tests/StegoForge.Tests.Wpf` is intentionally lightweight and headless-runner friendly for `windows-latest` CI agents:
+
+- DI/composition smoke coverage verifies service registration and construction for `MainWindowViewModel`, `EmbedViewModel`, and `ExtractViewModel`.
+- Startup composition coverage verifies the app startup path can resolve `MainWindow` with a valid `MainWindowViewModel` data context.
+- Command binding smoke coverage verifies command properties (`CanExecute`) initialize without throwing exceptions.
+- UI-thread-aware command-flow tests use `[WpfFact]` plus mocked/stubbed dependencies to validate embed/extract invocation state transitions without brittle pixel/UI automation.
+- Assembly-level test parallelization is disabled to avoid dispatcher-thread contention and improve reliability on headless Windows runners.
+
+Recommended focused command:
+
+```bash
+ dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
+```
+
 ## CLI contract test matrix
 
 Use the CLI test project as the acceptance source for command-surface behavior:
