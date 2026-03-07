@@ -287,3 +287,28 @@ This contract ensures deterministic error-code behavior across CLI and GUI surfa
 - Raise `MaxHeaderBytes` only when metadata descriptors are intentionally expanded.
 - Keep `MaxCarrierSizeBytes` enabled in interactive/CLI deployments to avoid accidental large-file processing; set it to `null` only in controlled batch environments.
 - Prefer incremental tuning with load tests so limits stay below infrastructure memory-pressure thresholds.
+
+## Security Logging Policy
+
+StegoForge centralizes error/log sanitization in `StegoForge.Application.Diagnostics` so every surface emits actionable diagnostics without leaking secrets.
+
+**Safe diagnostic fields**:
+
+- `operationType`
+- `carrierFormat`
+- `errorCode`
+- `correlationId`
+- `timestampUtc`
+
+**Redacted diagnostic fields**:
+
+- `password` / `passphrase`
+- plaintext payload bytes (`plaintextPayloadBytes`, `payloadBytes`)
+- derived key material (`derivedKey`, `kdfOutput`, `encryptionKey`)
+
+Policy behavior:
+
+1. Errors are mapped to `StegoErrorCode` and sanitized through `SecurityLoggingPolicy.SanitizeMessage(...)`.
+2. CLI/WPF emit a correlation ID for support/debug handoff.
+3. User-visible failures include operation and carrier-format context while replacing sensitive values with `<redacted>`.
+4. Raw secrets must never be emitted in logs, CLI stderr, or UI notification content.

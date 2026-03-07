@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using StegoForge.Core.Abstractions;
+using StegoForge.Application.Diagnostics;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
 using StegoForge.Wpf.Services;
@@ -201,11 +202,12 @@ public sealed class ExtractViewModel : OperationViewModelBase
         catch (Exception ex)
         {
             var mapped = StegoErrorMapper.FromException(ex);
-            SetMappedError(mapped);
-            ResultMessage = $"Extract failed ({mapped.Code}): {mapped.Message}";
+            var diagnostics = DiagnosticContext.Create("extract", DeriveCarrierFormatHint(CarrierPath));
+            var sanitized = SetMappedError(mapped, diagnostics);
+            ResultMessage = $"Extract failed ({sanitized.ErrorCode}). Correlation ID: {sanitized.CorrelationId}";
             StatusMessage = "Extract failed.";
             ProgressText = "Failed";
-            _notificationService.ShowError("Extract failed", ResultMessage);
+            _notificationService.ShowError("Extract failed", sanitized.ToWpfMessage());
             StatusChanged?.Invoke(this, StatusMessage);
         }
         finally
@@ -243,6 +245,17 @@ public sealed class ExtractViewModel : OperationViewModelBase
 
         var directory = Path.GetDirectoryName(path);
         return !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory);
+    }
+
+    private static string DeriveCarrierFormatHint(string? carrierPath)
+    {
+        if (string.IsNullOrWhiteSpace(carrierPath))
+        {
+            return "unknown";
+        }
+
+        var extension = Path.GetExtension(carrierPath).TrimStart('.').ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(extension) ? "unknown" : extension;
     }
 
     private void RaiseCommandCanExecuteChanged()

@@ -214,3 +214,42 @@ fi
 | `StegoErrorCode.WrongPassword` | `8` |
 | `StegoErrorCode.InsufficientCapacity` | `9` |
 | `StegoErrorCode.OutputAlreadyExists` | `10` |
+
+## Security Logging Policy
+
+CLI failures use sanitized diagnostics from `StegoForge.Application.Diagnostics`.
+
+On failure, CLI output includes these actionable fields:
+
+- operation type
+- carrier format (best-effort hint)
+- error code
+- correlation ID
+
+Sensitive values are redacted and must not appear in stderr / JSON error payloads:
+
+- passwords/passphrases
+- plaintext payload byte content
+- derived key/KDF output material
+
+### Error output examples
+
+Text mode:
+
+```text
+ERROR [WrongPassword] Unable to authenticate and decrypt payload. (operation=extract, carrierFormat=png, correlationId=2f7e...)
+```
+
+JSON mode:
+
+```json
+{
+  "type": "error",
+  "exitCode": 8,
+  "code": "WrongPassword",
+  "message": "Unable to authenticate and decrypt payload.",
+  "operationType": "extract",
+  "carrierFormat": "png",
+  "correlationId": "2f7e..."
+}
+```

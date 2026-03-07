@@ -1,4 +1,5 @@
 using System.CommandLine;
+using StegoForge.Application.Diagnostics;
 using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
@@ -40,6 +41,8 @@ public sealed class ExtractCommand(IExtractService extractService)
             var quiet = parseResult.GetValueForOption(quietOption);
             var verbose = parseResult.GetValueForOption(verboseOption);
 
+            var diagnostics = DiagnosticContext.Create("extract", CommandExecution.DeriveCarrierFormatHint(carrierPath));
+
             return await CommandExecution.ExecuteAsync(async cancellationToken =>
             {
                 var request = new ExtractRequest(
@@ -61,7 +64,7 @@ public sealed class ExtractCommand(IExtractService extractService)
                     IntegrityVerificationResult: response.IntegrityVerificationResult,
                     Warnings: response.Warnings,
                     Diagnostics: response.Diagnostics);
-            }, json).ConfigureAwait(false);
+            }, json, diagnostics).ConfigureAwait(false);
         });
 
         return command;

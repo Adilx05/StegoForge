@@ -1,4 +1,5 @@
 using System.CommandLine;
+using StegoForge.Application.Diagnostics;
 using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 
@@ -41,6 +42,8 @@ public sealed class CapacityCommand(ICapacityService capacityService)
             var quiet = parseResult.GetValueForOption(quietOption);
             var verbose = parseResult.GetValueForOption(verboseOption);
 
+            var diagnostics = DiagnosticContext.Create("capacity", CommandExecution.DeriveCarrierFormatHint(carrierPath));
+
             return await CommandExecution.ExecuteAsync(async cancellationToken =>
             {
                 var request = new Core.Models.CapacityRequest(
@@ -62,7 +65,7 @@ public sealed class CapacityCommand(ICapacityService capacityService)
                     FailureReason: response.FailureReason,
                     ConstraintBreakdown: response.ConstraintBreakdown,
                     Diagnostics: response.Diagnostics);
-            }, json).ConfigureAwait(false);
+            }, json, diagnostics).ConfigureAwait(false);
         });
 
         return command;

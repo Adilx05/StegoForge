@@ -1,3 +1,4 @@
+using StegoForge.Application.Diagnostics;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
 using StegoForge.Cli.Output;
@@ -6,7 +7,11 @@ namespace StegoForge.Cli.Commands;
 
 internal static class CommandExecution
 {
-    public static async Task<int> ExecuteAsync(Func<CancellationToken, Task<ICommandOutput>> action, bool json, CancellationToken cancellationToken = default)
+    public static async Task<int> ExecuteAsync(
+        Func<CancellationToken, Task<ICommandOutput>> action,
+        bool json,
+        DiagnosticContext diagnostics,
+        CancellationToken cancellationToken = default)
     {
         var formatter = CreateOutputFormatter(json);
 
@@ -21,23 +26,29 @@ internal static class CommandExecution
         catch (ArgumentException exception)
         {
             var error = StegoError.InvalidArguments(exception.Message);
-            return await WriteFailureAsync(formatter, error, cancellationToken).ConfigureAwait(false);
+            return await WriteFailureAsync(formatter, error, diagnostics, cancellationToken).ConfigureAwait(false);
         }
         catch (StegoForgeException exception)
         {
             var error = StegoErrorMapper.FromException(exception);
-            return await WriteFailureAsync(formatter, error, cancellationToken).ConfigureAwait(false);
+            return await WriteFailureAsync(formatter, error, diagnostics, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {
             var error = StegoError.InternalProcessingFailure("An internal processing failure occurred. Retry with verbose diagnostics or contact support.");
-            return await WriteFailureAsync(formatter, error, cancellationToken).ConfigureAwait(false);
+            return await WriteFailureAsync(formatter, error, diagnostics, cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private static async Task<int> WriteFailureAsync(IOutputFormatter formatter, StegoError error, CancellationToken cancellationToken)
+    private static async Task<int> WriteFailureAsync(IOutputFormatter formatter, StegoError error, DiagnosticContext diagnostics, CancellationToken cancellationToken)
     {
-        var failure = new CliCommandFailure(CliErrorContract.GetExitCode(error.Code), error);
+        var sanitized = SanitizedErrorDiagnostics.From(error, diagnostics);
+        var failure = new CliCommandFailure(
+            CliErrorContract.GetExitCode(error.Code),
+            error,
+            sanitized.ToCliText(),
+            sanitized);
+
         await formatter.WriteFailureAsync(failure, cancellationToken).ConfigureAwait(false);
         return failure.ExitCode;
     }
@@ -46,6 +57,17 @@ internal static class CommandExecution
         => json
             ? new JsonOutputFormatter(Console.Out, Console.Error)
             : new TextOutputFormatter(Console.Out, Console.Error);
+
+    public static string DeriveCarrierFormatHint(string? carrierPath)
+    {
+        if (string.IsNullOrWhiteSpace(carrierPath))
+        {
+            return "unknown";
+        }
+
+        var ext = Path.GetExtension(carrierPath).TrimStart('.').ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(ext) ? "unknown" : ext;
+    }
 
     public static ProcessingOptions BuildProcessingOptions(string compress, string encrypt, bool quiet, bool verbose)
     {
