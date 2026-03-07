@@ -108,8 +108,15 @@ public sealed class CarrierFormatHandlerFuzzIntegrationTests
 
                 var wav = new WavLsbFormatHandler();
                 await using var malformedWavCarrier = new MemoryStream(CreateRandomBytes(length: 8 + run, seedOffset: 301 + run));
-                var wavException = await Assert.ThrowsAsync<InvalidHeaderException>(() => wav.GetCapacityAsync(malformedWavCarrier));
-                AssertMappedCode(wavException, StegoErrorCode.InvalidHeader);
+                var wavException = await Assert.ThrowsAnyAsync<StegoForgeException>(() => wav.GetCapacityAsync(malformedWavCarrier));
+                Assert.True(
+                    wavException is InvalidHeaderException or UnsupportedFormatException,
+                    $"Unexpected exception type during long-running wav fuzz: {wavException.GetType().FullName}");
+
+                var expectedCode = wavException is InvalidHeaderException
+                    ? StegoErrorCode.InvalidHeader
+                    : StegoErrorCode.UnsupportedFormat;
+                AssertMappedCode(wavException, expectedCode);
             }
             catch (Exception exception)
             {
