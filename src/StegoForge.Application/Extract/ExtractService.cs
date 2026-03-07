@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using StegoForge.Application.Formats;
 using StegoForge.Application.Payload;
-using StegoForge.Application.Policies;
+using StegoForge.Application.Validation;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 using StegoForge.Core.Payload;
@@ -12,7 +12,7 @@ public sealed class ExtractService(
     CarrierFormatResolver formatResolver,
     PayloadOrchestrationService orchestrationService,
     IPayloadEnvelopeSerializer envelopeSerializer,
-    OperationPolicyGate policyGate) : IExtractService
+    OperationPolicyValidator policyGate) : IExtractService
 {
     private const string ProviderId = "stegoforge.application.extract-service";
 
@@ -35,7 +35,7 @@ public sealed class ExtractService(
         var payload = orchestrationService.ExtractPayload(envelope, request.ProcessingOptions, request.PasswordOptions, passphrase);
 
         var warnings = new List<string>();
-        var resolvedOutputPath = ResolveOutputPath(request.OutputPath, envelope, warnings);
+        var resolvedOutputPath = ResolveOutputPath(request.OutputPath, request.PreserveOriginalFileName, envelope, warnings);
         policyGate.EnsureOutputPolicy(resolvedOutputPath, request.ProcessingOptions.OverwriteBehavior);
 
         await File.WriteAllBytesAsync(resolvedOutputPath, payload, cancellationToken).ConfigureAwait(false);
@@ -70,8 +70,13 @@ public sealed class ExtractService(
             diagnostics: diagnostics);
     }
 
-    private static string ResolveOutputPath(string requestedOutputPath, PayloadEnvelope envelope, List<string> warnings)
+    private static string ResolveOutputPath(string requestedOutputPath, bool preserveOriginalFileName, PayloadEnvelope envelope, List<string> warnings)
     {
+        if (!preserveOriginalFileName)
+        {
+            return requestedOutputPath;
+        }
+
         var originalFileName = envelope.Header.OriginalFileName;
         if (string.IsNullOrWhiteSpace(originalFileName))
         {

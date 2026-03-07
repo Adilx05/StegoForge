@@ -1,6 +1,6 @@
 using StegoForge.Application.Capacity;
 using StegoForge.Application.Formats;
-using StegoForge.Application.Policies;
+using StegoForge.Application.Validation;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 using StegoForge.Formats.Bmp;
@@ -12,7 +12,7 @@ namespace StegoForge.Tests.Integration;
 
 public sealed class WavCapacityServiceIntegrationTests
 {
-    private readonly ICapacityService _service = new CapacityService(new CarrierFormatResolver([new PngLsbFormatHandler(), new BmpLsbFormatHandler(), new WavLsbFormatHandler()]), new OperationPolicyGate());
+    private readonly ICapacityService _service = new CapacityService(new CarrierFormatResolver([new PngLsbFormatHandler(), new BmpLsbFormatHandler(), new WavLsbFormatHandler()]), new OperationPolicyValidator());
 
     [Fact]
     public async Task GetCapacityAsync_WavCarrier_ReturnsExpectedDeterministicCapacityAndOverCapacityDiagnostics()

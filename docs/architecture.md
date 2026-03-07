@@ -162,7 +162,7 @@ These rules preserve compatibility and make failure modes explicit when environm
 | Request | Fields | Behavioral guarantees |
 | --- | --- | --- |
 | `EmbedRequest` | `CarrierPath`, `OutputPath`, `Payload`, `ProcessingOptions`, `PasswordOptions` | Required paths and non-empty payload are enforced. Option blocks default to shared defaults when omitted. |
-| `ExtractRequest` | `CarrierPath`, `OutputPath`, `ProcessingOptions`, `PasswordOptions` | Required paths are enforced. Option blocks default to shared defaults when omitted. |
+| `ExtractRequest` | `CarrierPath`, `OutputPath`, `ProcessingOptions`, `PasswordOptions`, `PreserveOriginalFileName` | Required paths are enforced. Option blocks default to shared defaults when omitted. Original-name preservation is explicit and validated against output-target policy. |
 | `CapacityRequest` | `CarrierPath`, `PayloadSizeBytes`, `ProcessingOptions` | Required carrier path and non-negative payload size are enforced. Processing options default when omitted. |
 | `InfoRequest` | `CarrierPath`, `ProcessingOptions` | Required carrier path is enforced. Processing options default when omitted. |
 
@@ -193,6 +193,24 @@ Errors should be expressed via `StegoErrorCode` + message + optional context so 
 | `InsufficientCapacity` | Carrier cannot safely hold the requested payload with selected processing options. | CLI should surface required vs available capacity and suggest `capacity` command usage. GUI should display capacity telemetry and suggest reducing payload or changing carrier/options. |
 | `OutputAlreadyExists` | Requested output path conflicts with an existing file and overwrite is disallowed. | CLI should instruct use of overwrite/force flag or alternate output path. GUI should provide overwrite confirmation or path picker. |
 | `InternalProcessingFailure` | Unexpected processing failure not attributable to actionable caller input. | CLI should emit a generic user-safe message and optionally reference verbose diagnostics. GUI should show a generic failure dialog with safe details and diagnostic correlation IDs when available. |
+
+
+## Operation policy validation (CLI/WPF parity)
+
+`OperationPolicyValidator` (`src/StegoForge.Application/Validation/OperationPolicyValidator.cs`) is the shared validation layer used by all application services (`EmbedService`, `ExtractService`, `InfoService`, `CapacityService`) to enforce deterministic option policies before provider orchestration.
+
+### Policy rules and deterministic exception mapping
+
+| Policy rule | Exception | `StegoErrorCode` |
+| --- | --- | --- |
+| Embed/extract with `EncryptionMode.Required` but missing password source reference. | `InvalidArgumentsException` | `InvalidArguments` |
+| Contradictory mode selection: `CompressionMode.Disabled` with non-zero `CompressionLevel`. | `InvalidArgumentsException` | `InvalidArguments` |
+| Contradictory password/encryption policy (`EncryptionMode.None` + `PasswordRequirement.Required`, or `EncryptionMode.Required` + `PasswordRequirement.Optional`). | `InvalidArgumentsException` | `InvalidArguments` |
+| Output target exists while `OverwriteBehavior.Disallow` is active. | `OutputExistsException` | `OutputAlreadyExists` |
+| Impossible extract target policy: `PreserveOriginalFileName=true` with non-directory explicit output target. | `InvalidArgumentsException` | `InvalidArguments` |
+| Missing carrier input path for any operation. | `FileNotFoundStegoException` | `FileNotFound` |
+
+This keeps CLI and WPF behavior aligned: both surfaces receive the same typed exception + error-code mapping from the application layer without duplicating policy checks in presentation code.
 
 ## Extensibility points
 
