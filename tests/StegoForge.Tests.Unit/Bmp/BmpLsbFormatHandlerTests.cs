@@ -68,7 +68,7 @@ public sealed class BmpLsbFormatHandlerTests
         using var carrier = await CreateBmpWithHeaderMutationAsync(16, 16, BmpBitsPerPixel.Pixel32, span =>
         {
             // biCompression at offset 30 (DWORD)
-            span[30] = 3;
+            span[30] = 1;
             span[31] = 0;
             span[32] = 0;
             span[33] = 0;
@@ -77,7 +77,7 @@ public sealed class BmpLsbFormatHandlerTests
 
         var exception = await Assert.ThrowsAsync<UnsupportedFormatException>(() => _handler.EmbedAsync(carrier, output, [1, 2, 3]));
 
-        Assert.Contains("detected mode 3", exception.Message);
+        Assert.Contains("detected mode 1", exception.Message);
         Assert.Equal(StegoErrorCode.UnsupportedFormat, StegoErrorMapper.FromException(exception).Code);
     }
 

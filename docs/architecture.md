@@ -93,7 +93,7 @@ Unsupported PNG modes are intentionally fail-fast and deterministic:
 
 - supported carriers are BMP files with valid `BM` signature + `BITMAPINFOHEADER`-compatible metadata,
 - supported pixel modes are only 24-bit BGR and 32-bit BGRA,
-- supported compression is only `BI_RGB` (mode `0`, uncompressed),
+- supported compression is `BI_RGB` for 24-bit and `BI_RGB` or `BI_BITFIELDS` for 32-bit (all uncompressed pixel layouts),
 - embedding uses RGB channel LSBs only; alpha is preserved and not used for payload bits.
 
 Unsupported combinations are fail-fast and deterministic:

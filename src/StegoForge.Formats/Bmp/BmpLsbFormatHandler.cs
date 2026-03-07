@@ -299,7 +299,7 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
                 return new(default, new UnsupportedFormatException($"Unsupported BMP bit depth for bmp-lsb-v1: detected {bitsPerPixelValue}-bit; supported formats are {BmpLsbV1Formats.SupportedSetDescription}."));
             }
 
-            if (!BmpLsbV1Formats.IsSupportedCompression(compression))
+            if (!BmpLsbV1Formats.IsSupportedCompression(bitsPerPixelValue, compression))
             {
                 return new(default, new UnsupportedFormatException($"Unsupported BMP compression for bmp-lsb-v1: detected mode {compression}; supported formats are {BmpLsbV1Formats.SupportedSetDescription}."));
             }
