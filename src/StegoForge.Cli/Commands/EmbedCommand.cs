@@ -62,7 +62,7 @@ public sealed class EmbedCommand(IEmbedService embedService)
                     response.BytesEmbedded,
                     response.Diagnostics
                 };
-            }, json, context).ConfigureAwait(false);
+            }, json).ConfigureAwait(false);
         });
 
         return command;

@@ -1,4 +1,3 @@
-using System.CommandLine.Invocation;
 using System.Text.Json;
 using StegoForge.Core.Models;
 
@@ -6,11 +5,11 @@ namespace StegoForge.Cli.Commands;
 
 internal static class CommandExecution
 {
-    public static async Task<int> ExecuteAsync(Func<CancellationToken, Task<object>> action, bool json, InvocationContext context)
+    public static async Task<int> ExecuteAsync(Func<CancellationToken, Task<object>> action, bool json, CancellationToken cancellationToken = default)
     {
         try
         {
-            var result = await action(context.GetCancellationToken()).ConfigureAwait(false);
+            var result = await action(cancellationToken).ConfigureAwait(false);
 
             if (json)
             {

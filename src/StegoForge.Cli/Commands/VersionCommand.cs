@@ -26,7 +26,7 @@ public sealed class VersionCommand
                 };
 
                 return Task.FromResult<object>(payload);
-            }, json, context).ConfigureAwait(false);
+            }, json).ConfigureAwait(false);
         });
 
         return command;

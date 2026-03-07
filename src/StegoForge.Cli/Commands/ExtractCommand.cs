@@ -62,7 +62,7 @@ public sealed class ExtractCommand(IExtractService extractService)
                     response.Warnings,
                     response.Diagnostics
                 };
-            }, json, context).ConfigureAwait(false);
+            }, json).ConfigureAwait(false);
         });
 
         return command;

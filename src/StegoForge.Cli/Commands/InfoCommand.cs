@@ -55,7 +55,7 @@ public sealed class InfoCommand(IInfoService infoService)
                     response.ProtectionDescriptors,
                     response.Diagnostics
                 };
-            }, json, context).ConfigureAwait(false);
+            }, json).ConfigureAwait(false);
         });
 
         return command;

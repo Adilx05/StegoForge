@@ -58,7 +58,7 @@ public sealed class CapacityCommand(ICapacityService capacityService)
                     response.ConstraintBreakdown,
                     response.Diagnostics
                 };
-            }, json, context).ConfigureAwait(false);
+            }, json).ConfigureAwait(false);
         });
 
         return command;
