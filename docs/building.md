@@ -125,16 +125,26 @@ These commands verify deterministic capacity boundaries, WAV embed/extract round
 ```
 
 
-## WPF-only build/test
+## WPF-only build/test (Windows)
 
-> Recommended on Windows with desktop workloads installed.
+> Run these on Windows with desktop workloads installed.
 
-```bash
-# Build WPF app
- dotnet build src/StegoForge.Wpf/StegoForge.Wpf.csproj
+```powershell
+# Restore only the GUI app + GUI test project graph
+ dotnet restore src/StegoForge.Wpf/StegoForge.Wpf.csproj
+ dotnet restore tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
 
-# Run WPF tests
- dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
+# Build WPF app only
+ dotnet build src/StegoForge.Wpf/StegoForge.Wpf.csproj -c Release
+
+# Build WPF test project only
+ dotnet build tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj -c Release
+
+# Run complete WPF-focused test suite
+ dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj -c Release
+
+# Optional focused suites: validation + operation-state + composition smoke
+ dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj -c Release --filter "FullyQualifiedName~ViewModelValidationTests|FullyQualifiedName~ViewModelOperationStateTests|FullyQualifiedName~WpfCompositionSmokeTests"
 ```
 
 ## Full-solution build/test

@@ -192,11 +192,28 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Deliver first usable desktop GUI workflow.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- GUI supports embed/extract flows with validation.
-- Progress and error states are user-readable and consistent.
-- Basic UI smoke tests pass on Windows runners.
+- [x] Embed/extract views are implemented with concrete field wiring and commands in:
+  - `src/StegoForge.Wpf/Views/EmbedView.xaml`
+  - `src/StegoForge.Wpf/Views/ExtractView.xaml`
+  - `src/StegoForge.Wpf/ViewModels/EmbedViewModel.cs`
+  - `src/StegoForge.Wpf/ViewModels/ExtractViewModel.cs`
+- [x] UI validation behavior is covered by WPF-focused tests:
+  - `EmbedViewModel_ReportsValidationMessage_ForMissingRequiredFields`
+  - `EmbedViewModel_CommandCanExecute_TransitionsWithValidationState`
+  - `ExtractViewModel_CommandCanExecute_TransitionsWithValidationState`
+  - file: `tests/StegoForge.Tests.Wpf/ViewModelValidationTests.cs`
+- [x] Progress/error operation state semantics are exercised by command-flow/state tests:
+  - `EmbedCommand_TracksBusyLifecycle_AndCompletionState`
+  - `ExtractCommand_MapsErrors_UsingSharedErrorMapper`
+  - `ExtractCommand_ResetsStatusBetweenOperations`
+  - files: `tests/StegoForge.Tests.Wpf/ViewModelOperationStateTests.cs`, `tests/StegoForge.Tests.Wpf/WpfCommandFlowTests.cs`
+- [x] Windows-capable smoke coverage verifies composition/startup for the v1 GUI shell:
+  - `CompositionContainer_ResolvesMainWindowAndOperationViewModels`
+  - `CommandBindings_InitializeWithoutExceptions`
+  - `StartupCompositionPath_ResolvesMainWindow`
+  - file: `tests/StegoForge.Tests.Wpf/WpfCompositionSmokeTests.cs`
 
 ## Milestone 12 — Hardening and robustness
 
