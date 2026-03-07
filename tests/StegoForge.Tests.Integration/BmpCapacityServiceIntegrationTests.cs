@@ -3,6 +3,7 @@ using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.PixelFormats;
 using StegoForge.Application.Capacity;
 using StegoForge.Application.Formats;
+using StegoForge.Application.Policies;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
 using StegoForge.Formats.Bmp;
@@ -13,7 +14,7 @@ namespace StegoForge.Tests.Integration;
 
 public sealed class BmpCapacityServiceIntegrationTests
 {
-    private readonly ICapacityService _service = new CapacityService(new CarrierFormatResolver([new PngLsbFormatHandler(), new BmpLsbFormatHandler()]));
+    private readonly ICapacityService _service = new CapacityService(new CarrierFormatResolver([new PngLsbFormatHandler(), new BmpLsbFormatHandler()]), new OperationPolicyGate());
 
     [Fact]
     public async Task GetCapacityAsync_BmpCarrier_ResolvesBmpHandler()
