@@ -1,14 +1,79 @@
 name: Release Artifacts
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag in format vX.Y.Z'
+        required: true
+        type: string
+      version:
+        description: 'Release version in format X.Y.Z'
+        required: true
+        type: string
+      changelog_summary:
+        description: 'Short summary aligned with CHANGELOG entry'
+        required: true
+        type: string
 
 jobs:
+  validate-release-metadata:
+    name: Validate Release Metadata
+    runs-on: ubuntu-latest
+
+    outputs:
+      tag: ${{ steps.capture.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate tag/version/changelog metadata
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_CHANGELOG_SUMMARY: ${{ inputs.changelog_summary }}
+        run: |
+          set -euo pipefail
+
+          tag="$INPUT_TAG"
+          version="$INPUT_VERSION"
+          summary="$INPUT_CHANGELOG_SUMMARY"
+
+          if [[ -z "$tag" || -z "$version" || -z "$summary" ]]; then
+            echo "tag, version, and changelog_summary are required."
+            exit 1
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag must match vX.Y.Z (received: $tag)."
+            exit 1
+          fi
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must match X.Y.Z (received: $version)."
+            exit 1
+          fi
+
+          expected_tag="v$version"
+          if [[ "$tag" != "$expected_tag" ]]; then
+            echo "Tag/version mismatch: expected $expected_tag from version $version, received $tag."
+            exit 1
+          fi
+
+          if ! rg -n "^## \[$version\]" CHANGELOG.md > /dev/null; then
+            echo "CHANGELOG.md is missing heading for version $version."
+            exit 1
+          fi
+
+      - name: Capture outputs
+        id: capture
+        run: echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+
   package-cli:
     name: Package CLI
     runs-on: ubuntu-latest
+    needs: validate-release-metadata
 
     steps:
       - name: Checkout
@@ -26,12 +91,13 @@ jobs:
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: stegoforge-cli-${{ github.ref_name }}
+          name: stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}
           path: artifacts/cli
 
   package-wpf:
     name: Package WPF
     runs-on: windows-latest
+    needs: validate-release-metadata
 
     steps:
       - name: Checkout
@@ -49,5 +115,5 @@ jobs:
       - name: Upload WPF artifact
         uses: actions/upload-artifact@v4
         with:
-          name: stegoforge-wpf-${{ github.ref_name }}
+          name: stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}
           path: artifacts/wpf
