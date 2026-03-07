@@ -103,20 +103,14 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
 
         var maxPayloadBytes = CapacityCalculator.CalculateFromSampleCount(wavData.SampleCount).MaximumRawEmbeddableBytes;
         var diagnostics = new OperationDiagnostics(
+            warnings: [],
             notes:
             [
                 "Channel strategy: one least-significant bit per 16-bit PCM sample.",
                 "Supported WAV set for wav-lsb-v1: RIFF/WAVE PCM format 1 with 16-bit little-endian mono/stereo.",
-                "Structural chunks are preserved verbatim; only data-chunk sample LSBs are modified."
-            ],
-            warnings: [],
-            metrics: new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["channels"] = wavData.Channels.ToString(),
-                ["sample-rate-hz"] = wavData.SampleRate.ToString(),
-                ["bits-per-sample"] = wavData.BitsPerSample.ToString(),
-                ["sample-count"] = wavData.SampleCount.ToString()
-            });
+                "Structural chunks are preserved verbatim; only data-chunk sample LSBs are modified.",
+                $"Carrier details: channels={wavData.Channels}, sample-rate-hz={wavData.SampleRate}, bits-per-sample={wavData.BitsPerSample}, sample-count={wavData.SampleCount}."
+            ]);
 
         return new CarrierInfoResponse(
             formatId: Format,
@@ -287,44 +281,46 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
             return false;
         }
 
-        if (fmt.AudioFormat != 1)
+        var fmtData = fmt.Value;
+
+        if (fmtData.AudioFormat != 1)
         {
             carrierData = default;
-            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports PCM format 1 only; detected format {fmt.AudioFormat}.");
+            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports PCM format 1 only; detected format {fmtData.AudioFormat}.");
             return false;
         }
 
-        if (fmt.BitsPerSample != 16)
+        if (fmtData.BitsPerSample != 16)
         {
             carrierData = default;
-            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports 16-bit samples only; detected {fmt.BitsPerSample}-bit.");
+            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports 16-bit samples only; detected {fmtData.BitsPerSample}-bit.");
             return false;
         }
 
-        if (fmt.Channels is not (1 or 2))
+        if (fmtData.Channels is not (1 or 2))
         {
             carrierData = default;
-            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports mono/stereo only; detected {fmt.Channels} channel(s).");
+            validationError = new UnsupportedFormatException($"wav-lsb-v1 supports mono/stereo only; detected {fmtData.Channels} channel(s).");
             return false;
         }
 
-        var expectedBlockAlign = (ushort)(fmt.Channels * (fmt.BitsPerSample / 8));
-        if (fmt.BlockAlign != expectedBlockAlign)
+        var expectedBlockAlign = (ushort)(fmtData.Channels * (fmtData.BitsPerSample / 8));
+        if (fmtData.BlockAlign != expectedBlockAlign)
         {
             carrierData = default;
-            validationError = new InvalidHeaderException($"WAV block alignment is invalid; expected {expectedBlockAlign}, detected {fmt.BlockAlign}.");
+            validationError = new InvalidHeaderException($"WAV block alignment is invalid; expected {expectedBlockAlign}, detected {fmtData.BlockAlign}.");
             return false;
         }
 
-        var expectedByteRate = fmt.SampleRate * fmt.BlockAlign;
-        if (fmt.ByteRate != expectedByteRate)
+        var expectedByteRate = fmtData.SampleRate * fmtData.BlockAlign;
+        if (fmtData.ByteRate != expectedByteRate)
         {
             carrierData = default;
-            validationError = new InvalidHeaderException($"WAV byte rate is invalid; expected {expectedByteRate}, detected {fmt.ByteRate}.");
+            validationError = new InvalidHeaderException($"WAV byte rate is invalid; expected {expectedByteRate}, detected {fmtData.ByteRate}.");
             return false;
         }
 
-        if ((dataChunkSize % fmt.BlockAlign) != 0)
+        if ((dataChunkSize % fmtData.BlockAlign) != 0)
         {
             carrierData = default;
             validationError = new InvalidHeaderException("WAV data chunk size is not aligned to sample frame size.");
@@ -332,7 +328,7 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
         }
 
         var sampleCount = dataChunkSize / 2L;
-        carrierData = new WavCarrierData(fileBytes, dataChunkOffset, dataChunkSize, sampleCount, fmt.Channels, fmt.SampleRate, fmt.BitsPerSample);
+        carrierData = new WavCarrierData(fileBytes, dataChunkOffset, dataChunkSize, sampleCount, fmtData.Channels, fmtData.SampleRate, fmtData.BitsPerSample);
         validationError = null;
         return true;
     }
