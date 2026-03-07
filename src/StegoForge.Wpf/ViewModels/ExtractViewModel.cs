@@ -136,7 +136,6 @@ public sealed class ExtractViewModel : OperationViewModelBase
 
         IsBusy = true;
         ProgressText = "Preparing request";
-        StatusMessage = "Preparing extraction options.";
         StatusChanged?.Invoke(this, StatusMessage);
 
         try
@@ -156,9 +155,6 @@ public sealed class ExtractViewModel : OperationViewModelBase
                 overwriteBehavior: AllowOverwrite ? OverwriteBehavior.Allow : OverwriteBehavior.Disallow);
 
             ProgressText = "Running extraction";
-            StatusMessage = "Extracting payload from carrier.";
-            StatusChanged?.Invoke(this, StatusMessage);
-
             var request = new ExtractRequest(CarrierPath, OutputPath, processingOptions, passwordOptions);
             var response = await _extractService.ExtractAsync(request).ConfigureAwait(true);
 

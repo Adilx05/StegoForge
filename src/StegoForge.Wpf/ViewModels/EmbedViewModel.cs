@@ -204,16 +204,12 @@ public sealed class EmbedViewModel : OperationViewModelBase
 
         IsBusy = true;
         ProgressText = "Preparing payload";
-        StatusMessage = "Reading payload from disk.";
         StatusChanged?.Invoke(this, StatusMessage);
 
         try
         {
             var payload = File.ReadAllBytes(PayloadPath);
             ProgressText = "Submitting embed request";
-            StatusMessage = "Embedding payload into carrier.";
-            StatusChanged?.Invoke(this, StatusMessage);
-
             var passwordOptions = string.IsNullOrWhiteSpace(Password)
                 ? new PasswordOptions(
                     requirement: RequireEncryption ? PasswordRequirement.Required : PasswordRequirement.Optional,
