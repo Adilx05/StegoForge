@@ -45,6 +45,19 @@ See:
 - `docs/architecture.md` for component-level details.
 - `docs/payload-format.md` for payload envelope shape and versioning.
 
+
+## Versioning foundation (MinVer)
+
+StegoForge now uses **MinVer** as the single source of semantic version resolution across all projects.
+
+- Tags with prefix `v` drive official versions (for example `v1.2.0` or `v1.3.0-beta.1`).
+- `Version` is set from `$(MinVerVersion)` for package/display consistency.
+- `AssemblyVersion` is intentionally stabilized as `Major.Minor.0.0` to reduce assembly binding churn.
+- `FileVersion` is numeric and maps to `Major.Minor.Patch.0` for Windows file metadata.
+- `InformationalVersion` is set to `$(MinVerVersion)` for runtime display surfaces.
+
+When building locally **without a matching release tag**, MinVer emits a sensible prerelease/dev version (using default prerelease identifiers `alpha.0`) so contributors can build and test without manual version edits.
+
 ## Build prerequisites
 
 - .NET SDK **10.0.100** (pinned in `global.json`; CI uses `10.0.x` with prerelease enabled).
