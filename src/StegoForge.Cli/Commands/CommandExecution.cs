@@ -1,4 +1,5 @@
 using System.Text.Json;
+using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
 
 namespace StegoForge.Cli.Commands;
@@ -18,9 +19,21 @@ internal static class CommandExecution
 
             return 0;
         }
-        catch (Exception exception)
+        catch (ArgumentException exception)
+        {
+            var failure = CliErrorContract.CreateInvalidArgumentsFailure(exception.Message);
+            await Console.Error.WriteLineAsync(failure.Message).ConfigureAwait(false);
+            return failure.ExitCode;
+        }
+        catch (StegoForgeException exception)
         {
             var failure = CliErrorContract.CreateFailureFromException(exception);
+            await Console.Error.WriteLineAsync(failure.Message).ConfigureAwait(false);
+            return failure.ExitCode;
+        }
+        catch (Exception)
+        {
+            var failure = CliErrorContract.CreateUnexpectedFailure();
             await Console.Error.WriteLineAsync(failure.Message).ConfigureAwait(false);
             return failure.ExitCode;
         }
