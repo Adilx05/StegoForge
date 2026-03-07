@@ -10,7 +10,9 @@ public sealed class CapacityCommand(ICapacityService capacityService)
         var command = new Command("capacity", "Estimate available capacity for a carrier file.\nExample: stegoforge capacity --carrier in.png --payload 2048 --json");
 
         var carrierOption = CommonCliOptions.CarrierPathOption();
-        var payloadOption = new Option<long>(["--payload", "-p"], () => 0L, "Payload size in bytes to evaluate against capacity.");
+        var payloadOption = new Option<long>("--payload", getDefaultValue: _ => 0L, "Payload size in bytes to evaluate against capacity.");
+        payloadOption.AddAlias("-p");
+
         var encryptOption = CommonCliOptions.EncryptOption();
         var compressOption = CommonCliOptions.CompressOption();
         var jsonOption = CommonCliOptions.JsonOption();
@@ -25,15 +27,15 @@ public sealed class CapacityCommand(ICapacityService capacityService)
         command.AddOption(quietOption);
         command.AddOption(verboseOption);
 
-        command.SetAction(async context =>
+        command.SetAction(async parseResult =>
         {
-            var carrierPath = context.ParseResult.GetValueForOption(carrierOption)!;
-            var payloadSize = context.ParseResult.GetValueForOption(payloadOption);
-            var encrypt = context.ParseResult.GetValueForOption(encryptOption)!;
-            var compress = context.ParseResult.GetValueForOption(compressOption)!;
-            var json = context.ParseResult.GetValueForOption(jsonOption);
-            var quiet = context.ParseResult.GetValueForOption(quietOption);
-            var verbose = context.ParseResult.GetValueForOption(verboseOption);
+            var carrierPath = parseResult.GetValueForOption(carrierOption)!;
+            var payloadSize = parseResult.GetValueForOption(payloadOption);
+            var encrypt = parseResult.GetValueForOption(encryptOption)!;
+            var compress = parseResult.GetValueForOption(compressOption)!;
+            var json = parseResult.GetValueForOption(jsonOption);
+            var quiet = parseResult.GetValueForOption(quietOption);
+            var verbose = parseResult.GetValueForOption(verboseOption);
 
             return await CommandExecution.ExecuteAsync(async cancellationToken =>
             {

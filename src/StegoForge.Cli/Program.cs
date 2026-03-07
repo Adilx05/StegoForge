@@ -1,7 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using StegoForge.Application;
-using StegoForge.Cli;
 using StegoForge.Cli.Commands;
 using StegoForge.Core.Abstractions;
 
@@ -25,20 +24,8 @@ static RootCommand BuildRootCommand(IServiceProvider services)
 
     root.AddAlias("stegoforge");
 
-    var helpCommand = new Command("help", "Show command help.\nExample: stegoforge help embed")
-    {
-        new Argument<string?>("command", () => null, "Optional command name to inspect.")
-    };
-
-    helpCommand.SetAction(async context =>
-    {
-        var command = context.ParseResult.GetValue<string?>("command");
-        var targetArgs = string.IsNullOrWhiteSpace(command)
-            ? ["--help"]
-            : [command, "--help"];
-
-        return await root.Parse(targetArgs).InvokeAsync().ConfigureAwait(false);
-    });
+    var helpCommand = new Command("help", "Show root command help.\nExample: stegoforge help");
+    helpCommand.SetAction(async _ => await root.Parse(new[] { "--help" }).InvokeAsync().ConfigureAwait(false));
 
     root.AddCommand(helpCommand);
 

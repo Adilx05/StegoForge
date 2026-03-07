@@ -24,14 +24,14 @@ public sealed class InfoCommand(IInfoService infoService)
         command.AddOption(quietOption);
         command.AddOption(verboseOption);
 
-        command.SetAction(async context =>
+        command.SetAction(async parseResult =>
         {
-            var carrierPath = context.ParseResult.GetValueForOption(carrierOption)!;
-            var encrypt = context.ParseResult.GetValueForOption(encryptOption)!;
-            var compress = context.ParseResult.GetValueForOption(compressOption)!;
-            var json = context.ParseResult.GetValueForOption(jsonOption);
-            var quiet = context.ParseResult.GetValueForOption(quietOption);
-            var verbose = context.ParseResult.GetValueForOption(verboseOption);
+            var carrierPath = parseResult.GetValueForOption(carrierOption)!;
+            var encrypt = parseResult.GetValueForOption(encryptOption)!;
+            var compress = parseResult.GetValueForOption(compressOption)!;
+            var json = parseResult.GetValueForOption(jsonOption);
+            var quiet = parseResult.GetValueForOption(quietOption);
+            var verbose = parseResult.GetValueForOption(verboseOption);
 
             return await CommandExecution.ExecuteAsync(async cancellationToken =>
             {

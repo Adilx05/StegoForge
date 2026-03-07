@@ -12,9 +12,9 @@ public sealed class VersionCommand
 
         command.AddOption(jsonOption);
 
-        command.SetAction(async context =>
+        command.SetAction(async parseResult =>
         {
-            var json = context.ParseResult.GetValueForOption(jsonOption);
+            var json = parseResult.GetValueForOption(jsonOption);
             return await CommandExecution.ExecuteAsync(_ =>
             {
                 var assembly = Assembly.GetExecutingAssembly().GetName();

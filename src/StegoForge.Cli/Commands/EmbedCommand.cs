@@ -30,17 +30,17 @@ public sealed class EmbedCommand(IEmbedService embedService)
         command.AddOption(quietOption);
         command.AddOption(verboseOption);
 
-        command.SetAction(async context =>
+        command.SetAction(async parseResult =>
         {
-            var carrierPath = context.ParseResult.GetValueForOption(carrierOption)!;
-            var payloadPath = context.ParseResult.GetValueForOption(payloadOption)!;
-            var outputPath = context.ParseResult.GetValueForOption(outputOption)!;
-            var encrypt = context.ParseResult.GetValueForOption(encryptOption)!;
-            var compress = context.ParseResult.GetValueForOption(compressOption)!;
-            var password = context.ParseResult.GetValueForOption(passwordOption);
-            var json = context.ParseResult.GetValueForOption(jsonOption);
-            var quiet = context.ParseResult.GetValueForOption(quietOption);
-            var verbose = context.ParseResult.GetValueForOption(verboseOption);
+            var carrierPath = parseResult.GetValueForOption(carrierOption)!;
+            var payloadPath = parseResult.GetValueForOption(payloadOption)!;
+            var outputPath = parseResult.GetValueForOption(outputOption)!;
+            var encrypt = parseResult.GetValueForOption(encryptOption)!;
+            var compress = parseResult.GetValueForOption(compressOption)!;
+            var password = parseResult.GetValueForOption(passwordOption);
+            var json = parseResult.GetValueForOption(jsonOption);
+            var quiet = parseResult.GetValueForOption(quietOption);
+            var verbose = parseResult.GetValueForOption(verboseOption);
 
             return await CommandExecution.ExecuteAsync(async cancellationToken =>
             {
