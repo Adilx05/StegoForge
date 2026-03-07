@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using StegoForge.Core.Errors;
+using StegoForge.Core.Models;
 using StegoForge.Formats.Bmp;
 using Xunit;
 
@@ -146,6 +147,26 @@ public sealed class BmpLsbFormatHandlerTests
 
         Assert.Contains("truncated", exception.Message);
         Assert.Equal(StegoErrorCode.InvalidHeader, StegoErrorMapper.FromException(exception).Code);
+    }
+
+    [Fact]
+    public async Task EmbedAsync_EnvelopeBeyondConfiguredLimit_ThrowsInvalidArguments()
+    {
+        var limited = new BmpLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 256, maxHeaderBytes: 64));
+        using var carrier = await CreateBmpAsync(32, 32, BmpBitsPerPixel.Pixel24);
+        using var output = new MemoryStream();
+
+        await Assert.ThrowsAsync<InvalidArgumentsException>(() => limited.EmbedAsync(carrier, output, new byte[16]));
+    }
+
+    [Fact]
+    public async Task ExtractAsync_PreCanceledToken_ThrowsOperationCanceledException()
+    {
+        using var carrier = await CreateBmpAsync(16, 16, BmpBitsPerPixel.Pixel24);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _handler.ExtractAsync(carrier, cts.Token));
     }
 
     private static async Task<MemoryStream> CreateCarrierWithEmbeddedLengthPrefixAsync(

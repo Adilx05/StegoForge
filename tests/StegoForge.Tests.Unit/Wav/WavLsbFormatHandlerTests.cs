@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using StegoForge.Core.Errors;
+using StegoForge.Core.Models;
 using StegoForge.Formats.Wav;
 using Xunit;
 
@@ -87,6 +88,26 @@ public sealed class WavLsbFormatHandlerTests
         var exception = await Assert.ThrowsAsync<CorruptedDataException>(() => _handler.ExtractAsync(carrier));
 
         Assert.Contains("exceeds carrier capacity", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EmbedAsync_EnvelopeBeyondConfiguredLimit_ThrowsInvalidArguments()
+    {
+        var limited = new WavLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 128, maxHeaderBytes: 64));
+        using var carrier = CreatePcm16Wav(sampleCountPerChannel: 2_048, channels: 1);
+        using var output = new MemoryStream();
+
+        await Assert.ThrowsAsync<InvalidArgumentsException>(() => limited.EmbedAsync(carrier, output, new byte[16]));
+    }
+
+    [Fact]
+    public async Task GetCapacityAsync_PreCanceledToken_ThrowsOperationCanceledException()
+    {
+        using var carrier = CreatePcm16Wav(sampleCountPerChannel: 1_024, channels: 1);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _handler.GetCapacityAsync(carrier, cts.Token));
     }
 
     private static MemoryStream CreatePcm16Wav(int sampleCountPerChannel, int channels, bool includeJunkChunk = false)

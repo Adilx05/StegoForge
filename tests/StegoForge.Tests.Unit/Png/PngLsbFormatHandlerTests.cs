@@ -3,6 +3,7 @@ using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using StegoForge.Core.Errors;
+using StegoForge.Core.Models;
 using StegoForge.Formats.Png;
 using Xunit;
 
@@ -71,6 +72,26 @@ public sealed class PngLsbFormatHandlerTests
         using var output = new MemoryStream();
 
         await Assert.ThrowsAsync<UnsupportedFormatException>(() => _handler.EmbedAsync(grayscale, output, [1, 2, 3]));
+    }
+
+    [Fact]
+    public async Task EmbedAsync_EnvelopeBeyondConfiguredLimit_ThrowsInvalidArguments()
+    {
+        var limitedHandler = new PngLsbFormatHandler(new ProcessingLimits(maxEnvelopeBytes: 8, maxPayloadBytes: 128, maxHeaderBytes: 64));
+        using var carrier = await CreatePngAsync(32, 32, withAlpha: true);
+        using var output = new MemoryStream();
+
+        await Assert.ThrowsAsync<InvalidArgumentsException>(() => limitedHandler.EmbedAsync(carrier, output, new byte[16]));
+    }
+
+    [Fact]
+    public async Task ExtractAsync_PreCanceledToken_ThrowsOperationCanceledException()
+    {
+        using var carrier = await CreatePngAsync(16, 16, withAlpha: true);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => _handler.ExtractAsync(carrier, cts.Token));
     }
 
     private static async Task<MemoryStream> CreatePngAsync(int width, int height, bool withAlpha)

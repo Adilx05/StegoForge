@@ -2,20 +2,27 @@ using System.Buffers.Binary;
 using System.Text;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Errors;
+using StegoForge.Core.Models;
 using StegoForge.Core.Payload;
 
 namespace StegoForge.Application.Payload;
 
-public sealed class PayloadEnvelopeSerializer : IPayloadEnvelopeSerializer
+public sealed class PayloadEnvelopeSerializer(ProcessingLimits? limits = null) : IPayloadEnvelopeSerializer
 {
     private const byte HeaderSchemaV1 = 0x01;
     private static readonly Encoding Utf8Strict = new UTF8Encoding(false, true);
+    private readonly ProcessingLimits _limits = limits ?? ProcessingLimits.SafeDefaults;
 
     public PayloadEnvelope Deserialize(byte[] envelopeBytes)
     {
         if (envelopeBytes is null)
         {
             throw new InvalidPayloadException("Envelope bytes cannot be null.");
+        }
+
+        if (envelopeBytes.Length > _limits.MaxEnvelopeBytes)
+        {
+            throw new InvalidPayloadException($"Envelope exceeds configured limit of {_limits.MaxEnvelopeBytes} bytes.");
         }
 
         var reader = new EnvelopeReader(envelopeBytes);
@@ -39,6 +46,11 @@ public sealed class PayloadEnvelopeSerializer : IPayloadEnvelopeSerializer
         }
 
         var headerLength = reader.ReadUInt16LittleEndian("header length");
+        if (headerLength > _limits.MaxHeaderBytes)
+        {
+            throw new InvalidPayloadException($"Header length exceeds configured limit of {_limits.MaxHeaderBytes} bytes.");
+        }
+
         var headerBytes = reader.ReadBytes(headerLength, "header block");
         var header = ParseHeader(headerBytes);
 
@@ -46,6 +58,11 @@ public sealed class PayloadEnvelopeSerializer : IPayloadEnvelopeSerializer
         if (payloadLength > int.MaxValue)
         {
             throw new InvalidPayloadException("Payload length exceeds supported in-memory bounds.");
+        }
+
+        if (payloadLength > (ulong)_limits.MaxPayloadBytes)
+        {
+            throw new InvalidPayloadException($"Payload length exceeds configured limit of {_limits.MaxPayloadBytes} bytes.");
         }
 
         var payload = reader.ReadBytes((int)payloadLength, "payload block");
@@ -96,6 +113,11 @@ public sealed class PayloadEnvelopeSerializer : IPayloadEnvelopeSerializer
             throw new InvalidHeaderException("Serialized header length exceeds 16-bit envelope limit.");
         }
 
+        if (headerBytes.Length > _limits.MaxHeaderBytes)
+        {
+            throw new InvalidHeaderException($"Serialized header length exceeds configured limit of {_limits.MaxHeaderBytes} bytes.");
+        }
+
         var metadataPresent = envelope.Header.SaltMetadata is not null || envelope.Header.NonceMetadata is not null || envelope.Header.OriginalFileName is not null;
         var flagMetadataPresent = envelope.Flags.HasFlag(EnvelopeFlags.MetadataPresent);
         if (metadataPresent != flagMetadataPresent)
@@ -106,12 +128,23 @@ public sealed class PayloadEnvelopeSerializer : IPayloadEnvelopeSerializer
         var payload = envelope.Payload;
         var integrityData = envelope.IntegrityData;
 
+        if (payload.Length > _limits.MaxPayloadBytes)
+        {
+            throw new InvalidPayloadException($"Payload length exceeds configured limit of {_limits.MaxPayloadBytes} bytes.");
+        }
+
         if (integrityData.Length > ushort.MaxValue)
         {
             throw new InvalidPayloadException("Integrity data length exceeds 16-bit envelope limit.");
         }
 
-        var output = new byte[4 + 1 + 1 + 2 + headerBytes.Length + 8 + payload.Length + 2 + integrityData.Length];
+        var outputLength = checked(4 + 1 + 1 + 2 + headerBytes.Length + 8 + payload.Length + 2 + integrityData.Length);
+        if (outputLength > _limits.MaxEnvelopeBytes)
+        {
+            throw new InvalidPayloadException($"Serialized envelope exceeds configured limit of {_limits.MaxEnvelopeBytes} bytes.");
+        }
+
+        var output = new byte[outputLength];
         var offset = 0;
 
         envelope.Magic.AsSpan().CopyTo(output.AsSpan(offset, 4));

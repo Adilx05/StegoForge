@@ -29,7 +29,8 @@ public sealed class EmbedService(
             request.ProcessingOptions,
             request.PasswordOptions,
             passphrase,
-            originalFileName: null);
+            originalFileName: null,
+            cancellationToken);
 
         var envelopeBytes = envelopeSerializer.Serialize(envelope);
 

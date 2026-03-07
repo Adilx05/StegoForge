@@ -265,3 +265,25 @@ Payload envelope serialization/deserialization must throw StegoForge typed excep
 - Unexpected internal failures should be translated to `InternalProcessingException` at orchestration boundaries when needed, preserving user-safe messages.
 
 This contract ensures deterministic error-code behavior across CLI and GUI surfaces without requiring transport-specific parsing logic in presentation layers.
+
+## Processing hardening limits
+
+`ProcessingLimits` (`src/StegoForge.Core/Models/OperationOptions.cs`) defines central guardrails used across orchestration, envelope serialization, and carrier handlers:
+
+- `MaxPayloadBytes` (default `16 MiB`)
+- `MaxHeaderBytes` (default `64 KiB`)
+- `MaxEnvelopeBytes` (default `20 MiB`)
+- `MaxCarrierSizeBytes` (default `128 MiB`, nullable to disable)
+
+### Enforcement points
+
+- `PayloadEnvelopeSerializer` rejects oversized envelope/header/payload length fields before allocating buffers for declared lengths.
+- `PayloadOrchestrationService` rejects oversized payloads before compression, decompression, or encryption work.
+- PNG/BMP/WAV format handlers reject oversized envelope payloads before embed/extract traversal and apply optional carrier-size guard checks before async stream copy.
+
+### Tuning guidance
+
+- Keep `MaxEnvelopeBytes` greater than or equal to `MaxPayloadBytes`.
+- Raise `MaxHeaderBytes` only when metadata descriptors are intentionally expanded.
+- Keep `MaxCarrierSizeBytes` enabled in interactive/CLI deployments to avoid accidental large-file processing; set it to `null` only in controlled batch environments.
+- Prefer incremental tuning with load tests so limits stay below infrastructure memory-pressure thresholds.
