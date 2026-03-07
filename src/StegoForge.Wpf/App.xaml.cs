@@ -5,7 +5,7 @@ using StegoForge.Wpf.ViewModels;
 
 namespace StegoForge.Wpf;
 
-public partial class App : Application
+public partial class App : global::System.Windows.Application
 {
     private ServiceProvider? _serviceProvider;
 
