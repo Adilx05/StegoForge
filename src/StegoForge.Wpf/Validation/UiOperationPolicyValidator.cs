@@ -1,3 +1,4 @@
+using System.IO;
 using StegoForge.Application.Validation;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
