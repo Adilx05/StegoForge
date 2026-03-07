@@ -10,7 +10,10 @@ public sealed class CapacityCommand(ICapacityService capacityService)
         var command = new Command("capacity", "Estimate available capacity for a carrier file.\nExample: stegoforge capacity --carrier in.png --payload 2048 --json");
 
         var carrierOption = CommonCliOptions.CarrierPathOption();
-        var payloadOption = new Option<long>("--payload", "Payload size in bytes to evaluate against capacity.");
+        var payloadOption = new Option<long>("--payload")
+        {
+            Description = "Payload size in bytes to evaluate against capacity."
+        };
         payloadOption.AddAlias("-p");
 
         var encryptOption = CommonCliOptions.EncryptOption();

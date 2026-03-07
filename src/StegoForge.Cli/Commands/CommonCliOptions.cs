@@ -7,7 +7,10 @@ internal static class CommonCliOptions
 {
     public static Option<string> CarrierPathOption()
     {
-        var option = new Option<string>("--carrier", "Path to the carrier file.");
+        var option = new Option<string>("--carrier")
+        {
+            Description = "Path to the carrier file."
+        };
         option.AddAlias("-c");
         option.Required = true;
         option.Validators.Add(result => ValidateExistingFilePath(result, "Carrier file"));
@@ -16,7 +19,10 @@ internal static class CommonCliOptions
 
     public static Option<string> PayloadPathOption()
     {
-        var option = new Option<string>("--payload", "Path to the payload file.");
+        var option = new Option<string>("--payload")
+        {
+            Description = "Path to the payload file."
+        };
         option.AddAlias("-p");
         option.Required = true;
         option.Validators.Add(result => ValidateExistingFilePath(result, "Payload file"));
@@ -25,7 +31,10 @@ internal static class CommonCliOptions
 
     public static Option<string> OutputPathOption()
     {
-        var option = new Option<string>("--out", "Path to the output file or output directory.");
+        var option = new Option<string>("--out")
+        {
+            Description = "Path to the output file or output directory."
+        };
         option.AddAlias("-o");
         option.Required = true;
         return option;
@@ -33,34 +42,52 @@ internal static class CommonCliOptions
 
     public static Option<string> EncryptOption()
     {
-        var option = new Option<string>("--encrypt", "Encryption mode: none|optional|required.");
+        var option = new Option<string>("--encrypt")
+        {
+            Description = "Encryption mode: none|optional|required."
+        };
         option.Validators.Add(result => ValidateAllowedValue(result, ["none", "optional", "required"]));
         return option;
     }
 
     public static Option<string> CompressOption()
     {
-        var option = new Option<string>("--compress", "Compression mode: off|auto|on.");
+        var option = new Option<string>("--compress")
+        {
+            Description = "Compression mode: off|auto|on."
+        };
         option.Validators.Add(result => ValidateAllowedValue(result, ["off", "none", "disabled", "auto", "automatic", "on", "enabled"]));
         return option;
     }
 
     public static Option<string?> PasswordOption()
-        => new("--password", "Password value used for encryption/decryption.");
+        => new("--password")
+        {
+            Description = "Password value used for encryption/decryption."
+        };
 
     public static Option<bool> JsonOption()
-        => new("--json", "Emit machine-readable JSON output.");
+        => new("--json")
+        {
+            Description = "Emit machine-readable JSON output."
+        };
 
     public static Option<bool> QuietOption()
     {
-        var option = new Option<bool>("--quiet", "Suppress non-error output.");
+        var option = new Option<bool>("--quiet")
+        {
+            Description = "Suppress non-error output."
+        };
         option.AddAlias("-q");
         return option;
     }
 
     public static Option<bool> VerboseOption()
     {
-        var option = new Option<bool>("--verbose", "Emit detailed output.");
+        var option = new Option<bool>("--verbose")
+        {
+            Description = "Emit detailed output."
+        };
         option.AddAlias("-v");
         return option;
     }
