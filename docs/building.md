@@ -1,5 +1,6 @@
 # Building
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 ## Prerequisites
 
 - .NET SDK 10.0+ (see `global.json`)

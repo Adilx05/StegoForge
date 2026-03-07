@@ -1,5 +1,6 @@
 # GUI (WPF)
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 The WPF app (`src/StegoForge.Wpf`) is the desktop user interface for StegoForge.
 
 ## Finalized v1 UX behavior

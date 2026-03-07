@@ -1,5 +1,6 @@
 # Payload Format (v1)
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 This document defines the finalized StegoForge payload envelope for embedding into carrier formats.
 
 ## v1 wire layout
@@ -164,7 +165,7 @@ This allows callers to distinguish format-policy incompatibility from malformed 
 
 ## PNG carrier limitations and integrity expectations
 
-For PNG-LSB carriers, payload integrity depends on preserving exact pixel-channel least-significant bits after embed. As a result:
+For `png-lsb-v1` carriers, payload integrity depends on preserving exact pixel-channel least-significant bits after embed. As a result:
 
 - the carrier must remain 8-bit `Rgb` or `RgbWithAlpha`; other color models/bit depths are rejected by the handler,
 - re-encoding through tooling that changes bit depth, palette/indexing, color type, or applies lossy transforms will invalidate embedded payload bits,

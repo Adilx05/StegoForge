@@ -1,5 +1,6 @@
 # CLI
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 The CLI app (`src/StegoForge.Cli`) provides scriptable steganography workflows.
 
 ## Canonical syntax
@@ -90,6 +91,12 @@ stegoforge version --json
 stegoforge help
 stegoforge --help
 ```
+
+### Option normalization
+
+- `--compress` canonical values are `off|auto|on`; aliases `none|disabled` map to `off`, and `automatic|enabled` map to `auto|on`.
+- `--encrypt` canonical values are `none|optional|required`.
+- Short aliases: `--carrier|-c`, `--payload|-p`, `--out|-o`, `--quiet|-q`, `--verbose|-v`.
 
 ## Output modes
 
