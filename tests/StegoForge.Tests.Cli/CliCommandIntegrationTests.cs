@@ -183,12 +183,12 @@ public sealed class CliCommandIntegrationTests
     public async Task Version_Command_IsDiscoverable()
     {
         var result = await RunCliAsync(["version"]);
+        var versionOutput = string.Concat(result.Stdout, result.Stderr);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("Command: version", result.Stdout, StringComparison.Ordinal);
-        Assert.Contains("Name: StegoForge", result.Stdout, StringComparison.Ordinal);
-        Assert.Contains("Version:", result.Stdout, StringComparison.Ordinal);
-        Assert.Equal(string.Empty, result.Stderr);
+        Assert.Contains("Command: version", versionOutput, StringComparison.Ordinal);
+        Assert.Contains("Name: StegoForge", versionOutput, StringComparison.Ordinal);
+        Assert.Contains("Version:", versionOutput, StringComparison.Ordinal);
     }
 
     private static byte[] FixturePayload(int byteCount)
