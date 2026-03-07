@@ -174,12 +174,19 @@ These commands verify deterministic capacity boundaries, WAV embed/extract round
 
 ## Release workflow behavior (`.github/workflows/release.yml`)
 
-- Trigger: push tags matching `v*` (for example, `v1.2.0`).
-- `package-cli` job (Ubuntu) publishes CLI output from `StegoForge.Cli`.
-- `package-wpf` job (Windows) publishes WPF output from `StegoForge.Wpf`.
-- Release artifact names include the tag name:
-  - `stegoforge-cli-<tag>`
-  - `stegoforge-wpf-<tag>`
+- Trigger: manual `workflow_dispatch` with validated `tag`, `version`, and `changelog_summary` metadata.
+- `package-cli` (Ubuntu) publishes CLI output and emits deterministic release files:
+  - `stegoforge-cli-<tag>-linux-x64.tar.gz`
+  - `stegoforge-cli-<tag>-linux-x64.sha256`
+  - `stegoforge-cli-<tag>-linux-x64.tar.gz.sig`
+  - `stegoforge-cli-<tag>-linux-x64.sha256.sig`
+- `package-wpf` (Windows) publishes WPF output and emits deterministic release files:
+  - `stegoforge-wpf-<tag>-windows-x64.zip`
+  - `stegoforge-wpf-<tag>-windows-x64.sha256`
+  - `stegoforge-wpf-<tag>-windows-x64.zip.sig`
+  - `stegoforge-wpf-<tag>-windows-x64.sha256.sig`
+- Both packaging jobs sign artifacts + checksum manifests with cosign and run pre-upload verification (`sha256` + `cosign verify-blob`).
+- `publish-release` downloads the packaged assets and publishes them as GitHub Release attachments.
 
 ## Useful diagnostics
 
@@ -214,6 +221,49 @@ StegoForge release operations follow SemVer and are executed via `.github/workfl
   - `tag` matches `^v\d+\.\d+\.\d+$`
   - `version` matches `^\d+\.\d+\.\d+$`
   - `tag == v{version}`
+
+
+### Artifact verification (consumer workflow)
+
+Download release assets for the target tag, including `stegoforge-cosign.pub`, then verify checksums and signatures before extraction/execution.
+
+Checksum verification:
+
+```bash
+sha256sum --check stegoforge-cli-vX.Y.Z-linux-x64.sha256
+```
+
+```powershell
+$line = Get-Content .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256 -Raw
+$parts = $line.Split('*', 2)
+$expected = $parts[0].Trim().ToLowerInvariant()
+$actual = (Get-FileHash -Path $parts[1].Trim() -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($expected -ne $actual) { throw "Checksum verification failed." }
+```
+
+Signature verification:
+
+```bash
+cosign verify-blob --key stegoforge-cosign.pub --signature stegoforge-cli-vX.Y.Z-linux-x64.tar.gz.sig stegoforge-cli-vX.Y.Z-linux-x64.tar.gz
+cosign verify-blob --key stegoforge-cosign.pub --signature stegoforge-cli-vX.Y.Z-linux-x64.sha256.sig stegoforge-cli-vX.Y.Z-linux-x64.sha256
+```
+
+```powershell
+cosign verify-blob --key .\stegoforge-cosign.pub --signature .\stegoforge-wpf-vX.Y.Z-windows-x64.zip.sig .\stegoforge-wpf-vX.Y.Z-windows-x64.zip
+cosign verify-blob --key .\stegoforge-cosign.pub --signature .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256.sig .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256
+```
+
+### Trust anchors and key rotation
+
+- Trust anchor: `stegoforge-cosign.pub` shipped with release assets.
+- Operators should pin and compare the expected public-key fingerprint from release notes before accepting a new key.
+- Rotation policy: publish old+new keys for one overlap release, sign with both during overlap when feasible, then retire old key in the next release notes.
+- Emergency revocation: invalidate revoked key fingerprints immediately and accept only artifacts signed with the replacement key.
+
+### Platform-specific signing limits
+
+- Optional Windows Authenticode signing (if certificate secrets are configured) applies to Windows executable binaries only; it is not a cross-platform attestation mechanism.
+- Cross-platform integrity/authenticity expectations are enforced via SHA-256 manifests and cosign detached signatures over both archives and checksum files.
 
 ### Changelog/release metadata requirements
 

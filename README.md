@@ -119,6 +119,8 @@ dotnet test StegoForge.sln --configuration Release
 | WPF restore/build/test block above | `.github/workflows/ci.yml` → `wpf` (`Restore WPF projects`, `Build WPF projects`, `Test WPF smoke project`) |
 | `dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --output artifacts/cli` | `.github/workflows/release.yml` → `package-cli` → `Publish CLI` |
 | `dotnet publish src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --output artifacts/wpf` | `.github/workflows/release.yml` → `package-wpf` → `Publish WPF` |
+| `sha256sum <artifact>` / `Get-FileHash <artifact> -Algorithm SHA256` | `.github/workflows/release.yml` → `package-cli` / `package-wpf` → checksum manifest generation + pre-upload validation |
+| `cosign sign-blob ...` + `cosign verify-blob ...` | `.github/workflows/release.yml` → `package-cli` / `package-wpf` → detached signature generation + pre-upload signature validation |
 
 Environment caveats:
 
@@ -149,6 +151,58 @@ When uncertain between MINOR/PATCH, default to MINOR only if a user-observable c
 - Add a dedicated heading for the release version and date, with categorized bullets (Added/Changed/Fixed/Security as applicable).
 - Include a **Migration notes** subsection for each release; if no action is required, explicitly state `None`.
 - The release workflow validates that the release version has a corresponding section in `CHANGELOG.md` and that a changelog summary is provided as workflow metadata.
+
+### Release artifact integrity verification
+
+Each release publishes deterministic artifact names, checksum manifests, and detached signatures:
+
+- `stegoforge-cli-vX.Y.Z-linux-x64.tar.gz`
+- `stegoforge-cli-vX.Y.Z-linux-x64.sha256`
+- `stegoforge-cli-vX.Y.Z-linux-x64.tar.gz.sig`
+- `stegoforge-cli-vX.Y.Z-linux-x64.sha256.sig`
+- `stegoforge-wpf-vX.Y.Z-windows-x64.zip`
+- `stegoforge-wpf-vX.Y.Z-windows-x64.sha256`
+- `stegoforge-wpf-vX.Y.Z-windows-x64.zip.sig`
+- `stegoforge-wpf-vX.Y.Z-windows-x64.sha256.sig`
+- `stegoforge-cosign.pub`
+
+Verify checksums:
+
+```bash
+sha256sum --check stegoforge-cli-vX.Y.Z-linux-x64.sha256
+```
+
+```powershell
+$line = Get-Content .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256 -Raw
+$parts = $line.Split('*', 2)
+$expected = $parts[0].Trim().ToLowerInvariant()
+$actual = (Get-FileHash -Path $parts[1].Trim() -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($expected -ne $actual) { throw "Checksum verification failed." }
+```
+
+Verify signatures:
+
+```bash
+cosign verify-blob --key stegoforge-cosign.pub --signature stegoforge-cli-vX.Y.Z-linux-x64.tar.gz.sig stegoforge-cli-vX.Y.Z-linux-x64.tar.gz
+cosign verify-blob --key stegoforge-cosign.pub --signature stegoforge-cli-vX.Y.Z-linux-x64.sha256.sig stegoforge-cli-vX.Y.Z-linux-x64.sha256
+```
+
+```powershell
+cosign verify-blob --key .\stegoforge-cosign.pub --signature .\stegoforge-wpf-vX.Y.Z-windows-x64.zip.sig .\stegoforge-wpf-vX.Y.Z-windows-x64.zip
+cosign verify-blob --key .\stegoforge-cosign.pub --signature .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256.sig .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256
+```
+
+Trust anchors and key-rotation guidance:
+
+- `stegoforge-cosign.pub` is the release verification trust anchor for detached signatures.
+- Validate that key fingerprints announced in release notes match `stegoforge-cosign.pub` before trusting a new key.
+- During key rotation, maintain overlap for at least one release cycle (old + new key published), then retire the old key in the following release notes.
+- If an emergency key revocation occurs, treat signatures from the revoked key as untrusted and rely only on artifacts re-signed with the replacement key.
+
+Platform-specific signing limits:
+
+- Windows Authenticode signing (when configured via repository secrets) only covers the signed Windows executable and does not attest Linux/macOS artifacts.
+- Cross-platform integrity is provided by SHA-256 manifests and cosign detached signatures over both artifacts and checksum files.
 
 ## CLI command status
 
