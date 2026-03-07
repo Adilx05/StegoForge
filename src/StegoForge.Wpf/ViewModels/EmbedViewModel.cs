@@ -17,11 +17,15 @@ public sealed class EmbedViewModel : OperationViewModelBase
     private readonly ICapacityService _capacityService;
     private readonly IInfoService _infoService;
     private readonly UiOperationPolicyValidator _validationService;
+    private readonly IFileDialogService _fileDialogService;
     private readonly INotificationService _notificationService;
 
     private readonly AsyncRelayCommand _checkCapacityCommand;
     private readonly AsyncRelayCommand _getInfoCommand;
     private readonly AsyncRelayCommand _embedCommand;
+    private readonly RelayCommand _browseCarrierCommand;
+    private readonly RelayCommand _browsePayloadCommand;
+    private readonly RelayCommand _browseOutputCommand;
 
     private string _carrierPath = string.Empty;
     private string _payloadPath = string.Empty;
@@ -36,27 +40,36 @@ public sealed class EmbedViewModel : OperationViewModelBase
         ICapacityService capacityService,
         IInfoService infoService,
         UiOperationPolicyValidator validationService,
+        IFileDialogService fileDialogService,
         INotificationService notificationService)
     {
         ArgumentNullException.ThrowIfNull(embedService);
         ArgumentNullException.ThrowIfNull(capacityService);
         ArgumentNullException.ThrowIfNull(infoService);
         ArgumentNullException.ThrowIfNull(validationService);
+        ArgumentNullException.ThrowIfNull(fileDialogService);
         ArgumentNullException.ThrowIfNull(notificationService);
 
         _embedService = embedService;
         _capacityService = capacityService;
         _infoService = infoService;
         _validationService = validationService;
+        _fileDialogService = fileDialogService;
         _notificationService = notificationService;
 
         _checkCapacityCommand = new AsyncRelayCommand(CheckCapacityAsync, () => !HasErrors);
         _getInfoCommand = new AsyncRelayCommand(GetInfoAsync, () => !HasErrors);
         _embedCommand = new AsyncRelayCommand(EmbedAsync, () => !HasErrors && !IsBusy);
+        _browseCarrierCommand = new RelayCommand(BrowseCarrier, () => !IsBusy);
+        _browsePayloadCommand = new RelayCommand(BrowsePayload, () => !IsBusy);
+        _browseOutputCommand = new RelayCommand(BrowseOutput, () => !IsBusy);
 
         CheckCapacityCommand = _checkCapacityCommand;
         GetInfoCommand = _getInfoCommand;
         EmbedCommand = _embedCommand;
+        BrowseCarrierCommand = _browseCarrierCommand;
+        BrowsePayloadCommand = _browsePayloadCommand;
+        BrowseOutputCommand = _browseOutputCommand;
 
         ErrorsChanged += (_, _) => RaiseCommandCanExecuteChanged();
         PropertyChanged += (_, args) =>
@@ -76,6 +89,12 @@ public sealed class EmbedViewModel : OperationViewModelBase
     public ICommand GetInfoCommand { get; }
 
     public ICommand EmbedCommand { get; }
+
+    public ICommand BrowseCarrierCommand { get; }
+
+    public ICommand BrowsePayloadCommand { get; }
+
+    public ICommand BrowseOutputCommand { get; }
 
     public string CarrierPath
     {
@@ -153,6 +172,36 @@ public sealed class EmbedViewModel : OperationViewModelBase
     {
         get => _resultMessage;
         private set => SetProperty(ref _resultMessage, value);
+    }
+
+    public bool TryApplyDroppedCarrierPath(string? path)
+    {
+        return TryApplyDroppedPath(path, static droppedPath => File.Exists(droppedPath), x => CarrierPath = x, "Dropped carrier path is invalid.");
+    }
+
+    public bool TryApplyDroppedPayloadPath(string? path)
+    {
+        return TryApplyDroppedPath(path, static droppedPath => File.Exists(droppedPath), x => PayloadPath = x, "Dropped payload path is invalid.");
+    }
+
+    public bool TryApplyDroppedOutputPath(string? path)
+    {
+        return TryApplyDroppedPath(path, IsValidOutputDropPath, x => OutputPath = x, "Dropped output path is invalid.");
+    }
+
+    private void BrowseCarrier()
+    {
+        CarrierPath = _fileDialogService.SelectCarrierPath(CarrierPath) ?? CarrierPath;
+    }
+
+    private void BrowsePayload()
+    {
+        PayloadPath = _fileDialogService.SelectPayloadPath(PayloadPath) ?? PayloadPath;
+    }
+
+    private void BrowseOutput()
+    {
+        OutputPath = _fileDialogService.SelectEmbedOutputPath(OutputPath) ?? OutputPath;
     }
 
     private async Task CheckCapacityAsync()
@@ -262,10 +311,36 @@ public sealed class EmbedViewModel : OperationViewModelBase
         SetErrors(nameof(Password), result.Issues.Where(static x => x.PropertyName == nameof(Password)).Select(static x => x.Message));
     }
 
+    private bool TryApplyDroppedPath(string? path, Func<string, bool> isAcceptedPath, Action<string> applyPath, string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path) || !isAcceptedPath(path))
+        {
+            _notificationService.ShowError("Invalid file path", errorMessage);
+            return false;
+        }
+
+        applyPath(path);
+        return true;
+    }
+
+    private static bool IsValidOutputDropPath(string path)
+    {
+        if (!Path.IsPathFullyQualified(path))
+        {
+            return false;
+        }
+
+        var directory = Path.GetDirectoryName(path);
+        return !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory);
+    }
+
     private void RaiseCommandCanExecuteChanged()
     {
         _checkCapacityCommand.RaiseCanExecuteChanged();
         _getInfoCommand.RaiseCanExecuteChanged();
         _embedCommand.RaiseCanExecuteChanged();
+        _browseCarrierCommand.RaiseCanExecuteChanged();
+        _browsePayloadCommand.RaiseCanExecuteChanged();
+        _browseOutputCommand.RaiseCanExecuteChanged();
     }
 }

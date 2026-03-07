@@ -93,6 +93,7 @@ public sealed class ViewModelValidationTests
             new NoOpCapacityService(),
             new NoOpInfoService(),
             new UiOperationPolicyValidator(new OperationPolicyValidator()),
+            new TestFileDialogService(),
             new AlwaysConfirmNotificationService());
     }
 
@@ -101,6 +102,7 @@ public sealed class ViewModelValidationTests
         return new ExtractViewModel(
             new NoOpExtractService(),
             new UiOperationPolicyValidator(new OperationPolicyValidator()),
+            new TestFileDialogService(),
             new AlwaysConfirmNotificationService());
     }
 
@@ -135,6 +137,30 @@ public sealed class ViewModelValidationTests
             {
                 Directory.Delete(RootPath, recursive: true);
             }
+        }
+    }
+
+
+    private sealed class TestFileDialogService : IFileDialogService
+    {
+        public string? SelectCarrierPath(string? initialPath = null)
+        {
+            return null;
+        }
+
+        public string? SelectPayloadPath(string? initialPath = null)
+        {
+            return null;
+        }
+
+        public string? SelectEmbedOutputPath(string? initialPath = null)
+        {
+            return null;
+        }
+
+        public string? SelectExtractOutputPath(string? initialPath = null)
+        {
+            return null;
         }
     }
 

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -14,8 +15,11 @@ public sealed class ExtractViewModel : OperationViewModelBase
 {
     private readonly IExtractService _extractService;
     private readonly UiOperationPolicyValidator _validationService;
+    private readonly IFileDialogService _fileDialogService;
     private readonly INotificationService _notificationService;
     private readonly AsyncRelayCommand _extractCommand;
+    private readonly RelayCommand _browseCarrierCommand;
+    private readonly RelayCommand _browseOutputCommand;
 
     private string _carrierPath = string.Empty;
     private string _outputPath = string.Empty;
@@ -27,25 +31,32 @@ public sealed class ExtractViewModel : OperationViewModelBase
     public ExtractViewModel(
         IExtractService extractService,
         UiOperationPolicyValidator validationService,
+        IFileDialogService fileDialogService,
         INotificationService notificationService)
     {
         ArgumentNullException.ThrowIfNull(extractService);
         ArgumentNullException.ThrowIfNull(validationService);
+        ArgumentNullException.ThrowIfNull(fileDialogService);
         ArgumentNullException.ThrowIfNull(notificationService);
 
         _extractService = extractService;
         _validationService = validationService;
+        _fileDialogService = fileDialogService;
         _notificationService = notificationService;
 
         _extractCommand = new AsyncRelayCommand(ExtractAsync, () => !HasErrors && !IsBusy);
+        _browseCarrierCommand = new RelayCommand(BrowseCarrier, () => !IsBusy);
+        _browseOutputCommand = new RelayCommand(BrowseOutput, () => !IsBusy);
         ExtractCommand = _extractCommand;
+        BrowseCarrierCommand = _browseCarrierCommand;
+        BrowseOutputCommand = _browseOutputCommand;
 
-        ErrorsChanged += (_, _) => _extractCommand.RaiseCanExecuteChanged();
+        ErrorsChanged += (_, _) => RaiseCommandCanExecuteChanged();
         PropertyChanged += (_, args) =>
         {
             if (string.Equals(args.PropertyName, nameof(IsBusy), StringComparison.Ordinal))
             {
-                _extractCommand.RaiseCanExecuteChanged();
+                RaiseCommandCanExecuteChanged();
             }
         };
 
@@ -55,6 +66,10 @@ public sealed class ExtractViewModel : OperationViewModelBase
     public event EventHandler<string>? StatusChanged;
 
     public ICommand ExtractCommand { get; }
+
+    public ICommand BrowseCarrierCommand { get; }
+
+    public ICommand BrowseOutputCommand { get; }
 
     public string CarrierPath
     {
@@ -122,6 +137,26 @@ public sealed class ExtractViewModel : OperationViewModelBase
         private set => SetProperty(ref _resultMessage, value);
     }
 
+    public bool TryApplyDroppedCarrierPath(string? path)
+    {
+        return TryApplyDroppedPath(path, static droppedPath => File.Exists(droppedPath), x => CarrierPath = x, "Dropped carrier path is invalid.");
+    }
+
+    public bool TryApplyDroppedOutputPath(string? path)
+    {
+        return TryApplyDroppedPath(path, IsValidOutputDropPath, x => OutputPath = x, "Dropped output path is invalid.");
+    }
+
+    private void BrowseCarrier()
+    {
+        CarrierPath = _fileDialogService.SelectCarrierPath(CarrierPath) ?? CarrierPath;
+    }
+
+    private void BrowseOutput()
+    {
+        OutputPath = _fileDialogService.SelectExtractOutputPath(OutputPath) ?? OutputPath;
+    }
+
     private async Task ExtractAsync()
     {
         ResetOperationState("Extracting payload...");
@@ -185,5 +220,35 @@ public sealed class ExtractViewModel : OperationViewModelBase
         SetErrors(nameof(CarrierPath), result.Issues.Where(static x => x.PropertyName == nameof(CarrierPath)).Select(static x => x.Message));
         SetErrors(nameof(OutputPath), result.Issues.Where(static x => x.PropertyName == nameof(OutputPath)).Select(static x => x.Message));
         SetErrors(nameof(Password), result.Issues.Where(static x => x.PropertyName == nameof(Password)).Select(static x => x.Message));
+    }
+
+    private bool TryApplyDroppedPath(string? path, Func<string, bool> isAcceptedPath, Action<string> applyPath, string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path) || !isAcceptedPath(path))
+        {
+            _notificationService.ShowError("Invalid file path", errorMessage);
+            return false;
+        }
+
+        applyPath(path);
+        return true;
+    }
+
+    private static bool IsValidOutputDropPath(string path)
+    {
+        if (!Path.IsPathFullyQualified(path))
+        {
+            return false;
+        }
+
+        var directory = Path.GetDirectoryName(path);
+        return !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory);
+    }
+
+    private void RaiseCommandCanExecuteChanged()
+    {
+        _extractCommand.RaiseCanExecuteChanged();
+        _browseCarrierCommand.RaiseCanExecuteChanged();
+        _browseOutputCommand.RaiseCanExecuteChanged();
     }
 }
