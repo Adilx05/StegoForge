@@ -23,13 +23,29 @@
 
         <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Carrier file" />
         <StackPanel Grid.Row="0" Grid.Column="1">
-            <TextBox x:Name="CarrierPathTextBox" Margin="0,0,0,2" Text="{Binding CarrierPath, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+            <DockPanel>
+                <Button Content="Browse..." Width="90" Margin="6,0,0,2" Command="{Binding BrowseCarrierCommand}" DockPanel.Dock="Right" />
+                <TextBox x:Name="CarrierPathTextBox"
+                         Margin="0,0,0,2"
+                         AllowDrop="True"
+                         PreviewDragOver="CarrierPathTextBox_OnPreviewDragOver"
+                         Drop="CarrierPathTextBox_OnDrop"
+                         Text="{Binding CarrierPath, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+            </DockPanel>
             <TextBlock Foreground="IndianRed" FontSize="11" Text="{Binding ElementName=CarrierPathTextBox, Path=(Validation.Errors)[0].ErrorContent}" />
         </StackPanel>
 
         <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Output folder/file" />
         <StackPanel Grid.Row="1" Grid.Column="1">
-            <TextBox x:Name="OutputPathTextBox" Margin="0,0,0,2" Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+            <DockPanel>
+                <Button Content="Browse..." Width="90" Margin="6,0,0,2" Command="{Binding BrowseOutputCommand}" DockPanel.Dock="Right" />
+                <TextBox x:Name="OutputPathTextBox"
+                         Margin="0,0,0,2"
+                         AllowDrop="True"
+                         PreviewDragOver="OutputPathTextBox_OnPreviewDragOver"
+                         Drop="OutputPathTextBox_OnDrop"
+                         Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}" />
+            </DockPanel>
             <TextBlock Foreground="IndianRed" FontSize="11" Text="{Binding ElementName=OutputPathTextBox, Path=(Validation.Errors)[0].ErrorContent}" />
         </StackPanel>
 

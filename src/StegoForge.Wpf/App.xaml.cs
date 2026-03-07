@@ -34,6 +34,7 @@ public partial class App : global::System.Windows.Application
         global::StegoForge.Application.ApplicationServiceCollectionExtensions.AddStegoForgeApplicationServices(services);
 
         services.AddSingleton<UiOperationPolicyValidator>();
+        services.AddSingleton<IFileDialogService, FileDialogService>();
         services.AddSingleton<INotificationService, DialogNotificationService>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddTransient<EmbedViewModel>();
