@@ -69,6 +69,20 @@ When changing BMP handler behavior, run these targeted commands before broader s
 
 These commands verify BMP capacity boundaries, deterministic unsupported-format behavior, and end-to-end embed/extract round-trip reliability.
 
+## WAV-focused test commands
+
+When changing WAV handler behavior, run these targeted commands before broader suites:
+
+```bash
+# WAV handler unit tests (round-trip + strict format validation)
+ dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --filter "FullyQualifiedName~StegoForge.Tests.Unit.Wav.WavLsbFormatHandlerTests|FullyQualifiedName~StegoForge.Tests.Unit.Wav.WavLsbFormatValidationTests"
+
+# WAV integration tests (capacity service behavior)
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~WavCapacityServiceIntegrationTests
+```
+
+These commands verify supported-format constraints, deterministic typed exceptions for unsupported/malformed WAVs, and integration-level capacity behavior.
+
 ## WPF-only build/test
 
 > Recommended on Windows with desktop workloads installed.
