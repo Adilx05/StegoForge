@@ -82,6 +82,7 @@ public sealed class OrchestrationConsistencyIntegrationTests
                 payload,
                 new ProcessingOptions(
                     compressionMode: CompressionMode.Disabled,
+                    compressionLevel: 0,
                     encryptionMode: EncryptionMode.None,
                     overwriteBehavior: OverwriteBehavior.Allow))));
 
@@ -157,6 +158,7 @@ public sealed class OrchestrationConsistencyIntegrationTests
             payload,
             new ProcessingOptions(
                 compressionMode: CompressionMode.Disabled,
+                compressionLevel: 0,
                 encryptionMode: EncryptionMode.Required,
                 overwriteBehavior: OverwriteBehavior.Allow),
             new PasswordOptions(PasswordRequirement.Required, PasswordSourceHint.None, "correct-password")));
