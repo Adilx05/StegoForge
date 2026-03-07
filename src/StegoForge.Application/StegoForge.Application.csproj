@@ -10,5 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="../StegoForge.Core/StegoForge.Core.csproj" />
     <ProjectReference Include="../StegoForge.Formats/StegoForge.Formats.csproj" />
+    <ProjectReference Include="../StegoForge.Compression/StegoForge.Compression.csproj" />
+    <ProjectReference Include="../StegoForge.Crypto/StegoForge.Crypto.csproj" />
   </ItemGroup>
 </Project>

@@ -1,13 +1,14 @@
 using StegoForge.Application.Formats;
+using StegoForge.Application.Policies;
 using StegoForge.Core.Abstractions;
-using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
 using StegoForge.Formats.Bmp;
 
 namespace StegoForge.Application.Capacity;
 
-public sealed class CapacityService(CarrierFormatResolver formatResolver) : ICapacityService
+public sealed class CapacityService(CarrierFormatResolver formatResolver, OperationPolicyGate policyGate) : ICapacityService
 {
+    private const string ProviderId = "stegoforge.application.capacity-service";
     private static readonly BmpLsbCapacityCalculator CapacityCalculator = new();
 
     public async Task<CapacityResponse> GetCapacityAsync(CapacityRequest request, CancellationToken cancellationToken = default)
@@ -15,10 +16,7 @@ public sealed class CapacityService(CarrierFormatResolver formatResolver) : ICap
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (!File.Exists(request.CarrierPath))
-        {
-            throw new InvalidArgumentsException($"Carrier file '{request.CarrierPath}' was not found.");
-        }
+        policyGate.ValidateCapacityRequest(request);
 
         await using var stream = File.OpenRead(request.CarrierPath);
         var handler = formatResolver.Resolve(stream);
@@ -43,7 +41,8 @@ public sealed class CapacityService(CarrierFormatResolver formatResolver) : ICap
                 "LSB channels used: 3 (RGB only).",
                 "Safe capacity policy reserves 128 bytes for payload envelope overhead."
             ],
-            providerIdentifier: nameof(CarrierFormatResolver));
+            algorithmIdentifier: "capacity:bmp-lsb-safe-estimator",
+            providerIdentifier: ProviderId);
 
         return new CapacityResponse(
             carrierFormatId: handler.Format,
