@@ -230,11 +230,16 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Complete primary docs for contributors and operators.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- README and docs set cover architecture, payload format, build, testing, CLI, GUI.
-- Build and test commands validated in CI docs.
-- Contribution guidance aligns with project conventions.
+- [x] README and primary docs coverage is present and cross-linked for architecture/build/testing/CLI/GUI and payload framing in `README.md`, `docs/architecture.md`, `docs/building.md`, `docs/testing.md`, `docs/cli.md`, `docs/gui.md`, and `docs/payload-format.md`.
+- [x] Docs consistency pass is complete for the current source baseline (`_Last verified against source: 2026-03-07 (0fd7c07)_`) across `README.md` and the docs set (`docs/architecture.md`, `docs/building.md`, `docs/testing.md`, `docs/cli.md`, `docs/gui.md`, `docs/payload-format.md`, `docs/roadmap.md`).
+- [x] CI-command mapping is explicitly documented and aligned with workflow job/step names from `.github/workflows/ci.yml` and `.github/workflows/release.yml` in:
+  - `README.md` (`CI/release command mapping`),
+  - `docs/building.md` (`CI command mapping`),
+  - `docs/testing.md` (`CI mapping for documented test commands`).
+  - Validation source of truth: CI jobs `core-cli` and `wpf`, plus release jobs `package-cli` and `package-wpf`.
+- [x] Contributor guidance is documented and maintained in `CONTRIBUTING.md`, including required docs, test expectations, and PR checklist conventions.
 
 ## Milestone 14 — Release readiness (v1.0)
 

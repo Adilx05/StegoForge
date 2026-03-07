@@ -60,6 +60,22 @@ Environment caveats:
 - WPF tests require Windows CI runners or local Windows machines.
 - Full hardening fuzz campaigns are scheduled in CI because they are intentionally long-running.
 
+## Docs QA checklist (pre-release)
+
+Before a release cut (or milestone-docs sign-off), maintainers should run this docs-focused checklist to keep documentation accurate and CI-aligned:
+
+- Verify scope docs are present and current: `README.md`, `CONTRIBUTING.md`, `docs/architecture.md`, `docs/payload-format.md`, `docs/building.md`, `docs/testing.md`, `docs/cli.md`, `docs/gui.md`, and `docs/roadmap.md`.
+- Confirm every command block still maps to current workflow names/steps in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+- Re-run core documentation-linked test suites locally (or validate equivalent CI runs):
+  - `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build`
+  - `dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build`
+  - `dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-build`
+  - On Windows: `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build`
+- Verify CI checks are green for documentation-linked jobs before release:
+  - `.github/workflows/ci.yml`: `core-cli`, `wpf`
+  - `.github/workflows/release.yml`: `package-cli`, `package-wpf` (for tag/release validation)
+- Ensure milestone status language is factual (checked items completed, pending work left unchecked) in `docs/roadmap.md`.
+
 
 ## WPF smoke test scope
 
