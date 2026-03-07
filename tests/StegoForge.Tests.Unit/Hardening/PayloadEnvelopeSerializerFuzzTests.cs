@@ -9,9 +9,12 @@ namespace StegoForge.Tests.Unit.Hardening;
 public sealed class PayloadEnvelopeSerializerFuzzTests
 {
     private const int Seed = 702_311;
+    private const string HardeningArtifactsDirEnvironmentVariable = "STEGOFORGE_HARDENING_ARTIFACTS_DIR";
     private readonly PayloadEnvelopeSerializer _serializer = new();
 
     [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Bounded")]
     public void Deserialize_FuzzedRandomByteArrays_OnlyThrowsTypedStegoExceptions()
     {
         var random = new Random(Seed);
@@ -33,10 +36,17 @@ public sealed class PayloadEnvelopeSerializerFuzzTests
                     $"Unexpected error code during fuzz deserialize: {exception.Code}");
                 Assert.Equal(exception.Code, StegoErrorMapper.FromException(exception).Code);
             }
+            catch (Exception exception)
+            {
+                PersistReproArtifact("payload-envelope-fuzz-bounded", Seed, bytes, exception);
+                throw;
+            }
         }
     }
 
     [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Bounded")]
     public void Deserialize_TruncatedAtEveryStructuralBoundary_ThrowsInvalidPayload()
     {
         var bytes = KnownFixtureEnvelopeBytes();
@@ -69,6 +79,8 @@ public sealed class PayloadEnvelopeSerializerFuzzTests
     }
 
     [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Bounded")]
     public void Deserialize_CorruptedLengthPrefixes_MapToDeterministicCodes()
     {
         var bytes = KnownFixtureEnvelopeBytes();
@@ -104,6 +116,8 @@ public sealed class PayloadEnvelopeSerializerFuzzTests
     }
 
     [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Bounded")]
     public void Deserialize_MutatedMetadataFlagAndHeaderCombinations_ThrowInvalidHeader()
     {
         var withMetadata = KnownFixtureEnvelopeBytes();
@@ -166,4 +180,55 @@ public sealed class PayloadEnvelopeSerializerFuzzTests
             0xAA, 0xBB
         ];
     }
+
+    private static void PersistReproArtifact(string campaignName, int seed, byte[] bytes, Exception exception)
+    {
+        var root = Environment.GetEnvironmentVariable(HardeningArtifactsDirEnvironmentVariable);
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(root);
+        var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
+        var basePath = Path.Combine(root, $"{campaignName}-{stamp}-{Guid.NewGuid():N}");
+        File.WriteAllBytes($"{basePath}.bin", bytes);
+        File.WriteAllText(
+            $"{basePath}.txt",
+            $"seed={seed}{Environment.NewLine}length={bytes.Length}{Environment.NewLine}exception={exception.GetType().FullName}{Environment.NewLine}message={exception.Message}");
+    }
+
+    [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Full")]
+    [Trait("Execution", "Nightly")]
+    public void Deserialize_FuzzedRandomByteArrays_LongRunningCampaign_OnlyThrowsTypedStegoExceptions()
+    {
+        var random = new Random(Seed + 91);
+
+        for (var i = 0; i < 2_048; i++)
+        {
+            var length = random.Next(0, 2_048);
+            var bytes = new byte[length];
+            random.NextBytes(bytes);
+
+            try
+            {
+                _serializer.Deserialize(bytes);
+            }
+            catch (StegoForgeException exception)
+            {
+                Assert.True(
+                    exception.Code is StegoErrorCode.InvalidHeader or StegoErrorCode.InvalidPayload,
+                    $"Unexpected error code during long-running fuzz deserialize: {exception.Code}");
+                Assert.Equal(exception.Code, StegoErrorMapper.FromException(exception).Code);
+            }
+            catch (Exception exception)
+            {
+                PersistReproArtifact("payload-envelope-fuzz-full", Seed + 91, bytes, exception);
+                throw;
+            }
+        }
+    }
+
 }
