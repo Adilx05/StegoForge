@@ -5,25 +5,55 @@ _Last verified against source: 2026-03-07 (`0fd7c07`)._
 
 - .NET SDK 10.0+ (see `global.json`)
 - Git
-- Windows required for WPF build/test workflows
+- Windows required for WPF build/test workflows and full-solution test runs
 
-## Restore once
+## CLI-only (cross-platform) build/test
+
+These commands match the `core-cli` CI job and run on Linux/macOS/Windows.
 
 ```bash
- dotnet restore StegoForge.sln
+dotnet restore src/StegoForge.Core/StegoForge.Core.csproj
+dotnet restore src/StegoForge.Application/StegoForge.Application.csproj
+dotnet restore src/StegoForge.Cli/StegoForge.Cli.csproj
+dotnet restore tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj
+dotnet restore tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj
+dotnet restore tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
+
+dotnet build src/StegoForge.Core/StegoForge.Core.csproj --configuration Release --no-restore
+dotnet build src/StegoForge.Application/StegoForge.Application.csproj --configuration Release --no-restore
+dotnet build src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --no-restore
+dotnet build tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-restore
+dotnet build tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-restore
+dotnet build tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-restore
+
+dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build
+dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build
+dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-build
 ```
 
-## CLI-only build/test
+## WPF-only (Windows-specific) build/test
 
-```bash
-# Build CLI app
- dotnet build src/StegoForge.Cli/StegoForge.Cli.csproj
+> Run these only on Windows hosts with desktop workloads installed.
 
-# Run CLI tests
- dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
+```powershell
+dotnet restore src/StegoForge.Wpf/StegoForge.Wpf.csproj
+dotnet restore tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
 
-# Optional: run unit tests frequently with CLI work
- dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj
+dotnet build src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --no-restore
+dotnet build tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-restore
+
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --filter "FullyQualifiedName~WpfCommandFlowTests"
+```
+
+## Full-solution build/test
+
+> `StegoForge.sln` includes WPF projects. Build/test the full solution on Windows.
+
+```powershell
+dotnet restore StegoForge.sln
+dotnet build StegoForge.sln --configuration Release
+dotnet test StegoForge.sln --configuration Release
 ```
 
 ## Contributor shortcut: envelope-focused tests
@@ -105,58 +135,23 @@ When changing WAV handler behavior, run these targeted commands before broader s
 
 These commands verify deterministic capacity boundaries, WAV embed/extract round-trip reliability (baseline/compressed/encrypted), and strict unsupported-format/invalid-header handling.
 
-## CLI-focused build/test
+## CI command mapping
 
-```bash
-# Build CLI app and CLI test project only
- dotnet build src/StegoForge.Cli/StegoForge.Cli.csproj
- dotnet build tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
-
-# Run all CLI tests
- dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
-
-# Targeted command-surface suites: help discoverability + version
- dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~HelpFlag_IsDiscoverable_AndPrintsCommandCatalog|FullyQualifiedName~HelpCommand_IsDiscoverable|FullyQualifiedName~Version_Command_IsDiscoverable"
-
-# Targeted command-surface suites: exit-code determinism
- dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~EmbedCommand_ReturnsMappedFailureCodeAndStableStderrFormat|FullyQualifiedName~ExtractCommand_ReturnsMappedFailureCode|FullyQualifiedName~CapacityCommand_ReturnsMappedFailureCode|FullyQualifiedName~InfoCommand_ReturnsMappedFailureCode|FullyQualifiedName~ParserError_MissingRequiredOptions_ReturnsInvalidArgumentsCodeAndStableMessageShape|FullyQualifiedName~ParserError_InvalidEnumValue_ReturnsInvalidArgumentsCodeAndStableMessageShape|FullyQualifiedName~ParserError_InvalidFileArgument_ReturnsInvalidArgumentsCodeAndStableMessageShape"
-
-# Targeted command-surface suites: JSON success/failure contracts
- dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --filter "FullyQualifiedName~InfoCommand_JsonSuccess_EmitsStableContractFields|FullyQualifiedName~CapacityCommand_JsonFailure_EmitsStableErrorShapeAndExitCode|FullyQualifiedName~ParserError_WithJsonFlag_EmitsJsonErrorShape|FullyQualifiedName~Info_ReportsMetadataPresenceAndAbsence_AsJson"
-```
-
-
-## WPF-only build/test (Windows)
-
-> Run these on Windows with desktop workloads installed.
-
-```powershell
-# Restore only the GUI app + GUI test project graph
- dotnet restore src/StegoForge.Wpf/StegoForge.Wpf.csproj
- dotnet restore tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
-
-# Build WPF app only
- dotnet build src/StegoForge.Wpf/StegoForge.Wpf.csproj -c Release
-
-# Build WPF test project only
- dotnet build tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj -c Release
-
-# Run complete WPF-focused test suite
- dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj -c Release
-
-# Optional focused suites: validation + operation-state + composition smoke
- dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj -c Release --filter "FullyQualifiedName~ViewModelValidationTests|FullyQualifiedName~ViewModelOperationStateTests|FullyQualifiedName~WpfCompositionSmokeTests"
-```
-
-## Full-solution build/test
-
-```bash
-# Build all projects
- dotnet build StegoForge.sln
-
-# Run complete test suite
- dotnet test StegoForge.sln
-```
+| Documented local command | CI workflow job/step |
+| --- | --- |
+| `dotnet restore src/StegoForge.Core/StegoForge.Core.csproj` (and the other five core/CLI restores above) | `.github/workflows/ci.yml` → `core-cli` → `Restore core/CLI projects` |
+| `dotnet build src/StegoForge.Core/StegoForge.Core.csproj --configuration Release --no-restore` (and the other five core/CLI builds above) | `.github/workflows/ci.yml` → `core-cli` → `Build core/CLI projects` |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build` (plus integration + CLI commands above) | `.github/workflows/ci.yml` → `core-cli` → `Test core/CLI projects` |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build --filter "Category=Hardening&Campaign!=Fuzz-Full"` and integration equivalent | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (bounded; PR/push)` |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build --filter "Category=Hardening&Campaign=Fuzz-Full"` and integration equivalent | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (full fuzz campaigns; nightly/scheduled)` |
+| `dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build --filter FullyQualifiedName~PngRoundTripIntegrationTests` (plus PNG/BMP acceptance filters) | `.github/workflows/ci.yml` → `core-cli` → `PNG/BMP v1 acceptance smoke filter (PR)` |
+| `dotnet restore src/StegoForge.Wpf/StegoForge.Wpf.csproj` + `dotnet restore tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj` | `.github/workflows/ci.yml` → `wpf` → `Restore WPF projects` |
+| `dotnet build src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --no-restore` + WPF tests build | `.github/workflows/ci.yml` → `wpf` → `Build WPF projects` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build` | `.github/workflows/ci.yml` → `wpf` → `Test WPF smoke project` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --filter "FullyQualifiedName~WpfCommandFlowTests"` | `.github/workflows/ci.yml` → `wpf` → `Test WPF command-flow subset` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --filter "Category=Hardening"` | `.github/workflows/ci.yml` → `wpf` → `Test WPF hardening subset (Windows)` |
+| `dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --output artifacts/cli` | `.github/workflows/release.yml` → `package-cli` → `Publish CLI` |
+| `dotnet publish src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --output artifacts/wpf` | `.github/workflows/release.yml` → `package-wpf` → `Publish WPF` |
 
 ## CI workflow behavior (`.github/workflows/ci.yml`)
 

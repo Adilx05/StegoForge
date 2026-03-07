@@ -21,16 +21,44 @@ _Last verified against source: 2026-03-07 (`0fd7c07`)._
 
 ## Recommended local commands
 
-```bash
-# Full test pass
- dotnet test StegoForge.sln
+### CLI-only / Core tests (cross-platform)
 
-# Focused runs
- dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj
- dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj
- dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
- dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
+```bash
+dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release
 ```
+
+### WPF-only tests (Windows-specific)
+
+```powershell
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "FullyQualifiedName~WpfCommandFlowTests"
+```
+
+### Full-solution tests (Windows-specific)
+
+> `StegoForge.sln` includes WPF projects and should be tested on Windows.
+
+```powershell
+dotnet test StegoForge.sln --configuration Release
+```
+
+### CI mapping for documented test commands
+
+| Documented command | CI workflow job/step |
+| --- | --- |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release` + integration + CLI equivalents | `.github/workflows/ci.yml` → `core-cli` → `Test core/CLI projects` |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --filter "Category=Hardening&Campaign!=Fuzz-Full"` + integration equivalent | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (bounded; PR/push)` |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --filter "Category=Hardening&Campaign=Fuzz-Full"` + integration equivalent | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (full fuzz campaigns; nightly/scheduled)` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release` | `.github/workflows/ci.yml` → `wpf` → `Test WPF smoke project` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "FullyQualifiedName~WpfCommandFlowTests"` | `.github/workflows/ci.yml` → `wpf` → `Test WPF command-flow subset` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "Category=Hardening"` | `.github/workflows/ci.yml` → `wpf` → `Test WPF hardening subset (Windows)` |
+
+Environment caveats:
+
+- WPF tests require Windows CI runners or local Windows machines.
+- Full hardening fuzz campaigns are scheduled in CI because they are intentionally long-running.
 
 
 ## WPF smoke test scope

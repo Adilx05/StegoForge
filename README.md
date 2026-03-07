@@ -55,7 +55,9 @@ See:
 
 Run from repository root.
 
-### Core + CLI (cross-platform)
+### CLI-only / Core (cross-platform)
+
+This block is the same restore/build/test flow used by CI `core-cli`.
 
 ```bash
 # Restore
@@ -80,7 +82,9 @@ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.cspr
 dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-build
 ```
 
-### WPF (Windows only)
+### WPF-only (Windows only)
+
+This block is the same restore/build/test flow used by CI `wpf`.
 
 ```powershell
 # Restore
@@ -94,6 +98,30 @@ dotnet build tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configurat
 # Test
 dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build
 ```
+
+### Full solution (Windows only)
+
+`StegoForge.sln` includes WPF projects/tests, so use this on Windows.
+
+```powershell
+dotnet restore StegoForge.sln
+dotnet build StegoForge.sln --configuration Release
+dotnet test StegoForge.sln --configuration Release
+```
+
+## CI/release command mapping
+
+| Local command set | Workflow mapping |
+| --- | --- |
+| CLI/core restore/build/test block above | `.github/workflows/ci.yml` → `core-cli` (`Restore core/CLI projects`, `Build core/CLI projects`, `Test core/CLI projects`) |
+| WPF restore/build/test block above | `.github/workflows/ci.yml` → `wpf` (`Restore WPF projects`, `Build WPF projects`, `Test WPF smoke project`) |
+| `dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --output artifacts/cli` | `.github/workflows/release.yml` → `package-cli` → `Publish CLI` |
+| `dotnet publish src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --output artifacts/wpf` | `.github/workflows/release.yml` → `package-wpf` → `Publish WPF` |
+
+Environment caveats:
+
+- WPF build/test/publish requires Windows.
+- Full hardening fuzz campaigns (`Campaign=Fuzz-Full`) are intentionally scheduled-only in CI and may be long-running locally.
 
 ## CLI command status
 
