@@ -2,6 +2,7 @@ using StegoForge.Application.Validation;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
+using StegoForge.Wpf.Services;
 using StegoForge.Wpf.Validation;
 using StegoForge.Wpf.ViewModels;
 using Xunit;
@@ -91,14 +92,16 @@ public sealed class ViewModelValidationTests
             new NoOpEmbedService(),
             new NoOpCapacityService(),
             new NoOpInfoService(),
-            new UiOperationPolicyValidator(new OperationPolicyValidator()));
+            new UiOperationPolicyValidator(new OperationPolicyValidator()),
+            new AlwaysConfirmNotificationService());
     }
 
     private static ExtractViewModel CreateExtractViewModel()
     {
         return new ExtractViewModel(
             new NoOpExtractService(),
-            new UiOperationPolicyValidator(new OperationPolicyValidator()));
+            new UiOperationPolicyValidator(new OperationPolicyValidator()),
+            new AlwaysConfirmNotificationService());
     }
 
     private sealed class TempFileFixture : IDisposable
@@ -132,6 +135,18 @@ public sealed class ViewModelValidationTests
             {
                 Directory.Delete(RootPath, recursive: true);
             }
+        }
+    }
+
+    private sealed class AlwaysConfirmNotificationService : INotificationService
+    {
+        public void ShowError(string title, string message)
+        {
+        }
+
+        public bool Confirm(string title, string message)
+        {
+            return true;
         }
     }
 

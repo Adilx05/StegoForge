@@ -3,15 +3,18 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using StegoForge.Core.Abstractions;
+using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
+using StegoForge.Wpf.Services;
 using StegoForge.Wpf.Validation;
 
 namespace StegoForge.Wpf.ViewModels;
 
-public sealed class ExtractViewModel : ViewModelBase
+public sealed class ExtractViewModel : OperationViewModelBase
 {
     private readonly IExtractService _extractService;
     private readonly UiOperationPolicyValidator _validationService;
+    private readonly INotificationService _notificationService;
     private readonly AsyncRelayCommand _extractCommand;
 
     private string _carrierPath = string.Empty;
@@ -21,18 +24,31 @@ public sealed class ExtractViewModel : ViewModelBase
     private bool _allowOverwrite;
     private string _resultMessage = "Extract workflow is ready.";
 
-    public ExtractViewModel(IExtractService extractService, UiOperationPolicyValidator validationService)
+    public ExtractViewModel(
+        IExtractService extractService,
+        UiOperationPolicyValidator validationService,
+        INotificationService notificationService)
     {
         ArgumentNullException.ThrowIfNull(extractService);
         ArgumentNullException.ThrowIfNull(validationService);
+        ArgumentNullException.ThrowIfNull(notificationService);
 
         _extractService = extractService;
         _validationService = validationService;
+        _notificationService = notificationService;
 
-        _extractCommand = new AsyncRelayCommand(ExtractAsync, () => !HasErrors);
+        _extractCommand = new AsyncRelayCommand(ExtractAsync, () => !HasErrors && !IsBusy);
         ExtractCommand = _extractCommand;
 
         ErrorsChanged += (_, _) => _extractCommand.RaiseCanExecuteChanged();
+        PropertyChanged += (_, args) =>
+        {
+            if (string.Equals(args.PropertyName, nameof(IsBusy), StringComparison.Ordinal))
+            {
+                _extractCommand.RaiseCanExecuteChanged();
+            }
+        };
+
         Validate();
     }
 
@@ -108,6 +124,20 @@ public sealed class ExtractViewModel : ViewModelBase
 
     private async Task ExtractAsync()
     {
+        ResetOperationState("Extracting payload...");
+        if (!_notificationService.Confirm("Confirm extract", "Proceed with extract operation?"))
+        {
+            StatusMessage = "Extract cancelled.";
+            ProgressText = "Cancelled";
+            ResultMessage = "Extract cancelled by user.";
+            StatusChanged?.Invoke(this, StatusMessage);
+            return;
+        }
+
+        IsBusy = true;
+        ProgressText = "Preparing request";
+        StatusChanged?.Invoke(this, StatusMessage);
+
         try
         {
             var passwordOptions = string.IsNullOrWhiteSpace(Password)
@@ -124,16 +154,28 @@ public sealed class ExtractViewModel : ViewModelBase
                 encryptionMode: RequireEncryption ? EncryptionMode.Required : EncryptionMode.Optional,
                 overwriteBehavior: AllowOverwrite ? OverwriteBehavior.Allow : OverwriteBehavior.Disallow);
 
+            ProgressText = "Running extraction";
             var request = new ExtractRequest(CarrierPath, OutputPath, processingOptions, passwordOptions);
             var response = await _extractService.ExtractAsync(request).ConfigureAwait(true);
 
             ResultMessage = $"Extract complete: {response.PayloadSizeBytes} B to '{response.ResolvedOutputPath}', format={response.CarrierFormatId}.";
-            StatusChanged?.Invoke(this, "Extract completed.");
+            StatusMessage = "Extract completed.";
+            ProgressText = "Completed";
+            StatusChanged?.Invoke(this, StatusMessage);
         }
         catch (Exception ex)
         {
-            ResultMessage = $"Extract failed: {ex.Message}";
-            StatusChanged?.Invoke(this, "Extract failed.");
+            var mapped = StegoErrorMapper.FromException(ex);
+            SetMappedError(mapped);
+            ResultMessage = $"Extract failed ({mapped.Code}): {mapped.Message}";
+            StatusMessage = "Extract failed.";
+            ProgressText = "Failed";
+            _notificationService.ShowError("Extract failed", ResultMessage);
+            StatusChanged?.Invoke(this, StatusMessage);
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 

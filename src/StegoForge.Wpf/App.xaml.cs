@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using StegoForge.Wpf.Services;
 using StegoForge.Wpf.Validation;
 using StegoForge.Wpf.ViewModels;
 
@@ -33,6 +34,7 @@ public partial class App : global::System.Windows.Application
         global::StegoForge.Application.ApplicationServiceCollectionExtensions.AddStegoForgeApplicationServices(services);
 
         services.AddSingleton<UiOperationPolicyValidator>();
+        services.AddSingleton<INotificationService, DialogNotificationService>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddTransient<EmbedViewModel>();
         services.AddTransient<ExtractViewModel>();

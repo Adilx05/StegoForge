@@ -4,17 +4,20 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using StegoForge.Core.Abstractions;
+using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
+using StegoForge.Wpf.Services;
 using StegoForge.Wpf.Validation;
 
 namespace StegoForge.Wpf.ViewModels;
 
-public sealed class EmbedViewModel : ViewModelBase
+public sealed class EmbedViewModel : OperationViewModelBase
 {
     private readonly IEmbedService _embedService;
     private readonly ICapacityService _capacityService;
     private readonly IInfoService _infoService;
     private readonly UiOperationPolicyValidator _validationService;
+    private readonly INotificationService _notificationService;
 
     private readonly AsyncRelayCommand _checkCapacityCommand;
     private readonly AsyncRelayCommand _getInfoCommand;
@@ -32,27 +35,37 @@ public sealed class EmbedViewModel : ViewModelBase
         IEmbedService embedService,
         ICapacityService capacityService,
         IInfoService infoService,
-        UiOperationPolicyValidator validationService)
+        UiOperationPolicyValidator validationService,
+        INotificationService notificationService)
     {
         ArgumentNullException.ThrowIfNull(embedService);
         ArgumentNullException.ThrowIfNull(capacityService);
         ArgumentNullException.ThrowIfNull(infoService);
         ArgumentNullException.ThrowIfNull(validationService);
+        ArgumentNullException.ThrowIfNull(notificationService);
 
         _embedService = embedService;
         _capacityService = capacityService;
         _infoService = infoService;
         _validationService = validationService;
+        _notificationService = notificationService;
 
         _checkCapacityCommand = new AsyncRelayCommand(CheckCapacityAsync, () => !HasErrors);
         _getInfoCommand = new AsyncRelayCommand(GetInfoAsync, () => !HasErrors);
-        _embedCommand = new AsyncRelayCommand(EmbedAsync, () => !HasErrors);
+        _embedCommand = new AsyncRelayCommand(EmbedAsync, () => !HasErrors && !IsBusy);
 
         CheckCapacityCommand = _checkCapacityCommand;
         GetInfoCommand = _getInfoCommand;
         EmbedCommand = _embedCommand;
 
         ErrorsChanged += (_, _) => RaiseCommandCanExecuteChanged();
+        PropertyChanged += (_, args) =>
+        {
+            if (string.Equals(args.PropertyName, nameof(IsBusy), StringComparison.Ordinal))
+            {
+                RaiseCommandCanExecuteChanged();
+            }
+        };
         Validate();
     }
 
@@ -179,9 +192,24 @@ public sealed class EmbedViewModel : ViewModelBase
 
     private async Task EmbedAsync()
     {
+        ResetOperationState("Embedding payload...");
+        if (!_notificationService.Confirm("Confirm embed", "Proceed with embed operation?"))
+        {
+            StatusMessage = "Embed cancelled.";
+            ProgressText = "Cancelled";
+            ResultMessage = "Embed cancelled by user.";
+            StatusChanged?.Invoke(this, StatusMessage);
+            return;
+        }
+
+        IsBusy = true;
+        ProgressText = "Preparing payload";
+        StatusChanged?.Invoke(this, StatusMessage);
+
         try
         {
             var payload = File.ReadAllBytes(PayloadPath);
+            ProgressText = "Submitting embed request";
             var passwordOptions = string.IsNullOrWhiteSpace(Password)
                 ? new PasswordOptions(
                     requirement: RequireEncryption ? PasswordRequirement.Required : PasswordRequirement.Optional,
@@ -200,12 +228,23 @@ public sealed class EmbedViewModel : ViewModelBase
             var response = await _embedService.EmbedAsync(request).ConfigureAwait(true);
 
             ResultMessage = $"Embed complete: {response.BytesEmbedded} B written to '{response.OutputPath}' via {response.CarrierFormatId}.";
-            StatusChanged?.Invoke(this, "Embed completed.");
+            StatusMessage = "Embed completed.";
+            ProgressText = "Completed";
+            StatusChanged?.Invoke(this, StatusMessage);
         }
         catch (Exception ex)
         {
-            ResultMessage = $"Embed failed: {ex.Message}";
-            StatusChanged?.Invoke(this, "Embed failed.");
+            var mapped = StegoErrorMapper.FromException(ex);
+            SetMappedError(mapped);
+            ResultMessage = $"Embed failed ({mapped.Code}): {mapped.Message}";
+            StatusMessage = "Embed failed.";
+            ProgressText = "Failed";
+            _notificationService.ShowError("Embed failed", ResultMessage);
+            StatusChanged?.Invoke(this, StatusMessage);
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 
