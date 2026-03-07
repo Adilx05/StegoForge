@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using StegoForge.Core.Abstractions;
 using StegoForge.Formats.Bmp;
 using StegoForge.Formats.Png;
+using StegoForge.Formats.Wav;
 
 namespace StegoForge.Formats;
 
@@ -13,6 +14,7 @@ public static class FormatServiceCollectionExtensions
 
         services.AddSingleton<ICarrierFormatHandler, PngLsbFormatHandler>();
         services.AddSingleton<ICarrierFormatHandler, BmpLsbFormatHandler>();
+        services.AddSingleton<ICarrierFormatHandler, WavLsbFormatHandler>();
 
         return services;
     }

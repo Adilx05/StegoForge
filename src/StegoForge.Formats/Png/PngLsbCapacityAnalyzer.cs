@@ -48,20 +48,22 @@ public sealed class PngLsbCapacityAnalyzer
 
     private static bool TryGetSupportedPngInfo(Stream stream, out PngCarrierInfo info)
     {
-        info = default;
-        stream.Position = 0;
-        IImageFormat? format = Image.DetectFormat(stream);
-        if (format is null || !string.Equals(format.Name, PngFormat.Instance.Name, StringComparison.Ordinal))
+        try
         {
-            return false;
-        }
+            info = default;
+            stream.Position = 0;
+            IImageFormat? format = Image.DetectFormat(stream);
+            if (format is null || !string.Equals(format.Name, PngFormat.Instance.Name, StringComparison.Ordinal))
+            {
+                return false;
+            }
 
-        stream.Position = 0;
-        var imageInfo = Image.Identify(stream);
-        if (imageInfo is null)
-        {
-            return false;
-        }
+            stream.Position = 0;
+            var imageInfo = Image.Identify(stream);
+            if (imageInfo is null)
+            {
+                return false;
+            }
 
         var pngMetadata = imageInfo.Metadata.GetPngMetadata();
         if (pngMetadata.BitDepth != PngBitDepth.Bit8)
@@ -76,6 +78,12 @@ public sealed class PngLsbCapacityAnalyzer
 
         info = new PngCarrierInfo(imageInfo.Width, imageInfo.Height, pngMetadata.ColorType!.Value);
         return true;
+        }
+        catch (UnknownImageFormatException)
+        {
+            info = default;
+            return false;
+        }
     }
 
     private static async Task<MemoryStream> CreateSeekableCopyAsync(Stream source, CancellationToken cancellationToken)
