@@ -243,10 +243,9 @@ public sealed class CliCommandIntegrationTests
             using var image = new Image<Rgb24>(width, height);
             for (var y = 0; y < image.Height; y++)
             {
-                Span<Rgb24> row = image.GetPixelRowSpan(y);
-                for (var x = 0; x < row.Length; x++)
+                for (var x = 0; x < image.Width; x++)
                 {
-                    row[x] = new Rgb24((byte)((x * 3) % 255), (byte)((y * 5) % 255), (byte)((x + y) % 255));
+                    image[x, y] = new Rgb24((byte)((x * 3) % 255), (byte)((y * 5) % 255), (byte)((x + y) % 255));
                 }
             }
 
@@ -260,10 +259,9 @@ public sealed class CliCommandIntegrationTests
             using var image = new Image<Rgb24>(width, height);
             for (var y = 0; y < image.Height; y++)
             {
-                Span<Rgb24> row = image.GetPixelRowSpan(y);
-                for (var x = 0; x < row.Length; x++)
+                for (var x = 0; x < image.Width; x++)
                 {
-                    row[x] = new Rgb24((byte)((x * 11 + y) % 255), (byte)((y * 7 + x) % 255), (byte)((x * 13 + y * 3) % 255));
+                    image[x, y] = new Rgb24((byte)((x * 11 + y) % 255), (byte)((y * 7 + x) % 255), (byte)((x * 13 + y * 3) % 255));
                 }
             }
 
