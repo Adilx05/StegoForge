@@ -49,13 +49,61 @@ public sealed class BmpLsbFormatHandlerTests
         Assert.False(supported);
     }
 
+
     [Fact]
     public async Task EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedBitDepth()
     {
         using var carrier = await CreateBmpAsync(12, 12, BmpBitsPerPixel.Pixel8);
         using var output = new MemoryStream();
 
-        await Assert.ThrowsAsync<UnsupportedFormatException>(() => _handler.EmbedAsync(carrier, output, [1, 2, 3]));
+        var exception = await Assert.ThrowsAsync<UnsupportedFormatException>(() => _handler.EmbedAsync(carrier, output, [1, 2, 3]));
+
+        Assert.Contains("detected 8-bit", exception.Message);
+        Assert.Equal(StegoErrorCode.UnsupportedFormat, StegoErrorMapper.FromException(exception).Code);
+    }
+
+    [Fact]
+    public async Task EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedCompressionMode()
+    {
+        using var carrier = await CreateBmpWithHeaderMutationAsync(16, 16, BmpBitsPerPixel.Pixel32, span =>
+        {
+            // biCompression at offset 30 (DWORD)
+            span[30] = 3;
+            span[31] = 0;
+            span[32] = 0;
+            span[33] = 0;
+        });
+        using var output = new MemoryStream();
+
+        var exception = await Assert.ThrowsAsync<UnsupportedFormatException>(() => _handler.EmbedAsync(carrier, output, [1, 2, 3]));
+
+        Assert.Contains("detected mode 3", exception.Message);
+        Assert.Equal(StegoErrorCode.UnsupportedFormat, StegoErrorMapper.FromException(exception).Code);
+    }
+
+    [Fact]
+    public async Task EmbedAsync_ThrowsInvalidHeader_ForTruncatedBmpHeader()
+    {
+        using var carrier = new MemoryStream([0x42, 0x4D, 0x01, 0x02]);
+        using var output = new MemoryStream();
+
+        var exception = await Assert.ThrowsAsync<InvalidHeaderException>(() => _handler.EmbedAsync(carrier, output, [1, 2, 3]));
+
+        Assert.Contains("truncated", exception.Message);
+        Assert.Equal(StegoErrorCode.InvalidHeader, StegoErrorMapper.FromException(exception).Code);
+    }
+
+
+    private static async Task<MemoryStream> CreateBmpWithHeaderMutationAsync(
+        int width,
+        int height,
+        BmpBitsPerPixel bitsPerPixel,
+        Action<byte[]> mutateHeader)
+    {
+        using var stream = await CreateBmpAsync(width, height, bitsPerPixel);
+        var bytes = stream.ToArray();
+        mutateHeader(bytes);
+        return new MemoryStream(bytes, writable: false);
     }
 
     private static async Task<MemoryStream> CreateBmpAsync(int width, int height, BmpBitsPerPixel bitsPerPixel)

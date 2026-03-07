@@ -131,7 +131,7 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
             notes:
             [
                 "Channel strategy: RGB least-significant-bit embedding with alpha channel excluded.",
-                $"Supported BMP depth for {Format}: {info.BitsPerPixel}-bit uncompressed ({(info.HasAlpha ? "alpha-capable" : "opaque")}).",
+                $"Supported BMP set for {Format}: {BmpLsbV1Formats.SupportedSetDescription}; detected carrier is {info.BitsPerPixel}-bit {(info.HasAlpha ? "BGRA" : "BGR")} uncompressed.",
                 "Layout note: BMP row padding is normalized by ImageSharp row access and does not change embedding order."
             ],
             providerIdentifier: "SixLabors.ImageSharp");
@@ -238,22 +238,29 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
 
     private static BmpCarrierInfo GetRequiredSupportedBmpInfo(Stream stream)
     {
-        if (!TryGetSupportedBmpInfo(stream, out var info))
+        var analysis = AnalyzeCarrier(stream);
+        if (analysis.ValidationError is not null)
         {
-            throw new UnsupportedFormatException("Carrier must be an uncompressed 24-bit or 32-bit BMP for bmp-lsb-v1.");
+            throw analysis.ValidationError;
         }
 
-        return info;
+        return analysis.Info;
     }
 
     private static bool TryGetSupportedBmpInfo(Stream stream, out BmpCarrierInfo info)
     {
-        info = default;
+        var analysis = AnalyzeCarrier(stream);
+        info = analysis.Info;
+        return analysis.ValidationError is null;
+    }
+
+    private static BmpCarrierAnalysis AnalyzeCarrier(Stream stream)
+    {
         stream.Position = 0;
         IImageFormat? format = Image.DetectFormat(stream);
         if (format is null || !string.Equals(format.Name, BmpFormat.Instance.Name, StringComparison.Ordinal))
         {
-            return false;
+            return new(default, new UnsupportedFormatException("Carrier must be a BMP file for bmp-lsb-v1."));
         }
 
         var headerBuffer = ArrayPool<byte>.Shared.Rent(54);
@@ -263,18 +270,18 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
             var bytesRead = stream.Read(headerBuffer, 0, 54);
             if (bytesRead < 54)
             {
-                return false;
+                return new(default, new InvalidHeaderException("BMP header is truncated; expected at least 54 bytes."));
             }
 
             if (headerBuffer[0] != (byte)'B' || headerBuffer[1] != (byte)'M')
             {
-                return false;
+                return new(default, new InvalidHeaderException("BMP signature is invalid; expected BM marker."));
             }
 
             var dibHeaderSize = BinaryPrimitives.ReadUInt32LittleEndian(headerBuffer.AsSpan(14, 4));
             if (dibHeaderSize < 40)
             {
-                return false;
+                return new(default, new InvalidHeaderException("Unsupported BMP DIB header; expected BITMAPINFOHEADER (40 bytes) or larger."));
             }
 
             var width = BinaryPrimitives.ReadInt32LittleEndian(headerBuffer.AsSpan(18, 4));
@@ -284,30 +291,23 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
 
             if (width <= 0 || heightRaw == 0)
             {
-                return false;
+                return new(default, new InvalidHeaderException("BMP dimensions are invalid; width must be positive and height must be non-zero."));
             }
 
-            if (bitsPerPixelValue is not (24 or 32))
+            if (!BmpLsbV1Formats.IsSupportedBitsPerPixel(bitsPerPixelValue))
             {
-                return false;
+                return new(default, new UnsupportedFormatException($"Unsupported BMP bit depth for bmp-lsb-v1: detected {bitsPerPixelValue}-bit; supported formats are {BmpLsbV1Formats.SupportedSetDescription}."));
             }
 
-            var isSupportedCompression = bitsPerPixelValue switch
+            if (!BmpLsbV1Formats.IsSupportedCompression(compression))
             {
-                24 => compression == 0,
-                32 => compression is 0 or 3,
-                _ => false
-            };
-
-            if (!isSupportedCompression)
-            {
-                return false;
+                return new(default, new UnsupportedFormatException($"Unsupported BMP compression for bmp-lsb-v1: detected mode {compression}; supported formats are {BmpLsbV1Formats.SupportedSetDescription}."));
             }
 
             var height = Math.Abs(heightRaw);
-            var bitsPerPixel = bitsPerPixelValue == 24 ? BmpBitsPerPixel.Pixel24 : BmpBitsPerPixel.Pixel32;
-            info = new BmpCarrierInfo(width, height, bitsPerPixel, bitsPerPixelValue == 32);
-            return true;
+            var bitsPerPixel = bitsPerPixelValue == BmpLsbV1Formats.Bgr24BitsPerPixel ? BmpBitsPerPixel.Pixel24 : BmpBitsPerPixel.Pixel32;
+            var carrierInfo = new BmpCarrierInfo(width, height, bitsPerPixel, bitsPerPixelValue == BmpLsbV1Formats.Bgra32BitsPerPixel);
+            return new(carrierInfo, null);
         }
         finally
         {
@@ -342,4 +342,6 @@ public sealed class BmpLsbFormatHandler : ICarrierFormatHandler
     }
 
     private readonly record struct BmpCarrierInfo(int Width, int Height, BmpBitsPerPixel BitsPerPixel, bool HasAlpha);
+
+    private readonly record struct BmpCarrierAnalysis(BmpCarrierInfo Info, Exception? ValidationError);
 }

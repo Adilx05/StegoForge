@@ -147,6 +147,21 @@ To keep CLI/GUI handling stable, parser failures should map to StegoForge typed 
   - may be used by extraction orchestration to normalize lower-level payload failures while preserving deterministic `StegoErrorCode` mapping.
 
 
+## BMP carrier limitations and compatibility expectations
+
+For `bmp-lsb-v1`, carrier compatibility is intentionally strict to keep extraction deterministic:
+
+- only 24-bit BGR (`BitsPerPixel=24`) and 32-bit BGRA (`BitsPerPixel=32`) BMPs are accepted,
+- only `BI_RGB` uncompressed mode (`Compression=0`) is accepted for both 24-bit and 32-bit carriers,
+- indexed/paletted BMPs, RLE/bitfield-compressed BMPs, and other bit depths are rejected before embed/extract proceeds.
+
+Failure mapping is stable by policy:
+
+- unsupported bit depth/compression => `UnsupportedFormatException` => `StegoErrorCode.UnsupportedFormat`,
+- malformed or truncated BMP structural header => `InvalidHeaderException` => `StegoErrorCode.InvalidHeader`.
+
+This allows callers to distinguish format-policy incompatibility from malformed carrier data while still receiving actionable messages with detected values and accepted format set.
+
 ## PNG carrier limitations and integrity expectations
 
 For PNG-LSB carriers, payload integrity depends on preserving exact pixel-channel least-significant bits after embed. As a result:
