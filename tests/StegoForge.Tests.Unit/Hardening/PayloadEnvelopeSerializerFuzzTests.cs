@@ -28,7 +28,9 @@ public sealed class PayloadEnvelopeSerializerFuzzTests
             }
             catch (StegoForgeException exception)
             {
-                Assert.Contains(exception.Code, [StegoErrorCode.InvalidHeader, StegoErrorCode.InvalidPayload]);
+                Assert.True(
+                    exception.Code is StegoErrorCode.InvalidHeader or StegoErrorCode.InvalidPayload,
+                    $"Unexpected error code during fuzz deserialize: {exception.Code}");
                 Assert.Equal(exception.Code, StegoErrorMapper.FromException(exception).Code);
             }
         }
