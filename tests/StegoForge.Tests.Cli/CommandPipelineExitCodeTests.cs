@@ -134,7 +134,8 @@ public sealed class CommandPipelineExitCodeTests
         Assert.Equal(3, exitCode);
         var stderr = errorWriter.ToString();
         Assert.StartsWith("ERROR [InvalidArguments]", stderr, StringComparison.Ordinal);
-        Assert.Contains("Required option", stderr, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--carrier", stderr, StringComparison.Ordinal);
+        Assert.Contains("required", stderr, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
