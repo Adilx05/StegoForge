@@ -12,6 +12,8 @@ namespace StegoForge.Tests.Wpf;
 public sealed class WpfDiagnosticsSanitizationTests
 {
     [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Surface", "WPF")]
     public async Task ExtractFailure_DoesNotExposeSecrets_InViewModelOrNotificationMessage()
     {
         using var fixture = new TempFileFixture();

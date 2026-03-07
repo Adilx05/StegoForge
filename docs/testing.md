@@ -338,11 +338,44 @@ Files: `tests/StegoForge.Tests.Unit/Application/CarrierFormatResolverTests.cs`, 
 - Large-file memory profile checks.
 - Multi-file batch throughput benchmarking.
 
-## CI guidance (planned)
+## CI hardening strategy
 
-- Run unit + CLI/integration tests on all supported platforms.
-- Run WPF tests on Windows runners.
-- Publish test results and coverage artifacts.
+CI now separates baseline correctness runs from hardening-focused runs so pull requests stay deterministic while nightly schedules can run deeper campaigns.
+
+### Baseline jobs (all PRs/pushes)
+
+- `core-cli` matrix (`ubuntu-latest`, `windows-latest`) runs full unit, integration, and CLI suites.
+- `wpf` (`windows-latest`) runs WPF smoke + command-flow tests.
+
+### Hardening jobs in CI
+
+- **Bounded hardening segment (PR/push):**
+  - Unit + integration tests filtered with `Category=Hardening&Campaign!=Fuzz-Full`.
+  - This includes deterministic serializer/handler fuzz subsets and hardening regression coverage.
+- **WPF hardening subset (Windows):**
+  - WPF tests filtered with `Category=Hardening` to validate GUI-layer sanitization/robustness on the Windows runner.
+- **Full fuzz segment (scheduled/nightly):**
+  - Unit + integration tests filtered with `Category=Hardening&Campaign=Fuzz-Full`.
+  - Intended for longer-running deterministic fuzz campaigns that are too expensive for PR latency.
+
+### Trait conventions for hardening campaigns
+
+Use xUnit traits on hardening tests so CI routing remains explicit:
+
+- `Category=Hardening` — marks tests that are part of the hardening strategy.
+- `Campaign=Fuzz-Bounded` — deterministic, short-running fuzz subset suitable for PRs.
+- `Campaign=Fuzz-Full` + `Execution=Nightly` — long-running campaign reserved for scheduled workflows.
+
+### Hardening artifact capture
+
+CI sets `STEGOFORGE_HARDENING_ARTIFACTS_DIR` for hardening test segments.
+When an unexpected exception is encountered during fuzz loops, tests persist minimal repro artifacts to that folder (raw failing bytes + seed/exception metadata).
+The workflow uploads:
+
+- `TestResults/*.trx`
+- `TestResults/hardening-repros/*`
+
+This provides immediate corpus/repro seed evidence for post-failure debugging without rerunning entire campaigns locally.
 
 ## Milestone 2 Contract Stability Tests
 

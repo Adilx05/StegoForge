@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
   core-cli:
@@ -49,6 +52,22 @@ jobs:
           dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build --logger "trx;LogFileName=integration.trx" --results-directory TestResults
           dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-build --logger "trx;LogFileName=cli.trx" --results-directory TestResults
 
+      - name: Hardening suite (bounded; PR/push)
+        if: github.event_name != 'schedule'
+        env:
+          STEGOFORGE_HARDENING_ARTIFACTS_DIR: TestResults/hardening-repros
+        run: |
+          dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build --filter "Category=Hardening&Campaign!=Fuzz-Full" --logger "trx;LogFileName=hardening-unit-bounded.trx" --results-directory TestResults
+          dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build --filter "Category=Hardening&Campaign!=Fuzz-Full" --logger "trx;LogFileName=hardening-integration-bounded.trx" --results-directory TestResults
+
+      - name: Hardening suite (full fuzz campaigns; nightly/scheduled)
+        if: github.event_name == 'schedule'
+        env:
+          STEGOFORGE_HARDENING_ARTIFACTS_DIR: TestResults/hardening-repros
+        run: |
+          dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build --filter "Category=Hardening&Campaign=Fuzz-Full" --logger "trx;LogFileName=hardening-unit-full.trx" --results-directory TestResults
+          dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build --filter "Category=Hardening&Campaign=Fuzz-Full" --logger "trx;LogFileName=hardening-integration-full.trx" --results-directory TestResults
+
       - name: PNG/BMP v1 acceptance smoke filter (PR)
         if: github.event_name == 'pull_request'
         run: |
@@ -62,7 +81,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-core-cli-${{ matrix.os }}
-          path: TestResults/*.trx
+          path: |
+            TestResults/*.trx
+            TestResults/hardening-repros/*
           if-no-files-found: warn
 
   wpf:
@@ -95,10 +116,18 @@ jobs:
       - name: Test WPF command-flow subset
         run: dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --filter "FullyQualifiedName~WpfCommandFlowTests" --logger "trx;LogFileName=wpf-command-flow.trx" --results-directory TestResults
 
+      - name: Test WPF hardening subset (Windows)
+        if: github.event_name != 'schedule'
+        env:
+          STEGOFORGE_HARDENING_ARTIFACTS_DIR: TestResults/hardening-repros
+        run: dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --filter "Category=Hardening" --logger "trx;LogFileName=wpf-hardening.trx" --results-directory TestResults
+
       - name: Upload WPF test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-wpf-windows-latest
-          path: TestResults/*.trx
+          path: |
+            TestResults/*.trx
+            TestResults/hardening-repros/*
           if-no-files-found: warn

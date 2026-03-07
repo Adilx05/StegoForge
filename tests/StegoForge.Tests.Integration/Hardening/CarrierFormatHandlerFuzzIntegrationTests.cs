@@ -15,8 +15,11 @@ namespace StegoForge.Tests.Integration.Hardening;
 public sealed class CarrierFormatHandlerFuzzIntegrationTests
 {
     private const int Seed = 889_331;
+    private const string HardeningArtifactsDirEnvironmentVariable = "STEGOFORGE_HARDENING_ARTIFACTS_DIR";
 
     [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Bounded")]
     public async Task PngHandler_FuzzedCarrierCorruption_MapsDeterministicExceptions()
     {
         var handler = new PngLsbFormatHandler();
@@ -38,6 +41,8 @@ public sealed class CarrierFormatHandlerFuzzIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Bounded")]
     public async Task BmpHandler_FuzzedCarrierCorruption_MapsDeterministicExceptions()
     {
         var handler = new BmpLsbFormatHandler();
@@ -59,6 +64,8 @@ public sealed class CarrierFormatHandlerFuzzIntegrationTests
     }
 
     [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Bounded")]
     public async Task WavHandler_FuzzedCarrierCorruption_MapsDeterministicExceptions()
     {
         var handler = new WavLsbFormatHandler();
@@ -77,6 +84,50 @@ public sealed class CarrierFormatHandlerFuzzIntegrationTests
         await using var corruptedLengthCarrier = CreateWavCarrier(sampleFramesPerChannel: 256, forceOddSampleLowBytes: true);
         var corruptedLengthException = await Assert.ThrowsAsync<CorruptedDataException>(() => handler.ExtractAsync(corruptedLengthCarrier));
         AssertMappedCode(corruptedLengthException, StegoErrorCode.CorruptedData);
+    }
+
+    [Fact]
+    [Trait("Category", "Hardening")]
+    [Trait("Campaign", "Fuzz-Full")]
+    [Trait("Execution", "Nightly")]
+    public async Task CarrierHandlers_FuzzedCarrierCorruption_LongRunningCampaign_MapsDeterministicExceptions()
+    {
+        for (var run = 0; run < 6; run++)
+        {
+            try
+            {
+                var png = new PngLsbFormatHandler();
+                await using var malformedPngCarrier = new MemoryStream(CreateRandomBytes(length: 64 + run, seedOffset: 101 + run));
+                var pngException = await Assert.ThrowsAsync<UnsupportedFormatException>(() => png.GetCapacityAsync(malformedPngCarrier));
+                AssertMappedCode(pngException, StegoErrorCode.UnsupportedFormat);
+
+                var bmp = new BmpLsbFormatHandler();
+                await using var malformedBmpCarrier = new MemoryStream(CreateRandomBytes(length: 54 + run, seedOffset: 201 + run));
+                var bmpException = await Assert.ThrowsAsync<UnsupportedFormatException>(() => bmp.GetCapacityAsync(malformedBmpCarrier));
+                AssertMappedCode(bmpException, StegoErrorCode.UnsupportedFormat);
+
+                var wav = new WavLsbFormatHandler();
+                await using var malformedWavCarrier = new MemoryStream(CreateRandomBytes(length: 8 + run, seedOffset: 301 + run));
+                var wavException = await Assert.ThrowsAnyAsync<StegoForgeException>(() => wav.GetCapacityAsync(malformedWavCarrier));
+                Assert.True(
+                    wavException is InvalidHeaderException or UnsupportedFormatException,
+                    $"Unexpected exception type during long-running wav fuzz: {wavException.GetType().FullName}");
+
+                var expectedCode = wavException is InvalidHeaderException
+                    ? StegoErrorCode.InvalidHeader
+                    : StegoErrorCode.UnsupportedFormat;
+                AssertMappedCode(wavException, expectedCode);
+            }
+            catch (Exception exception)
+            {
+                PersistReproArtifact(
+                    "carrier-handler-fuzz-full",
+                    Seed + run,
+                    CreateRandomBytes(length: 96 + run, seedOffset: 401 + run),
+                    exception);
+                throw;
+            }
+        }
     }
 
     private static void AssertMappedCode(StegoForgeException exception, StegoErrorCode expectedCode)
@@ -175,4 +226,22 @@ public sealed class CarrierFormatHandlerFuzzIntegrationTests
 
         return new MemoryStream(stream.ToArray(), writable: false);
     }
+
+    private static void PersistReproArtifact(string campaignName, int seed, byte[] bytes, Exception exception)
+    {
+        var root = Environment.GetEnvironmentVariable(HardeningArtifactsDirEnvironmentVariable);
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(root);
+        var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
+        var basePath = Path.Combine(root, $"{campaignName}-{stamp}-{Guid.NewGuid():N}");
+        File.WriteAllBytes($"{basePath}.bin", bytes);
+        File.WriteAllText(
+            $"{basePath}.txt",
+            $"seed={seed}{Environment.NewLine}length={bytes.Length}{Environment.NewLine}exception={exception.GetType().FullName}{Environment.NewLine}message={exception.Message}");
+    }
+
 }
