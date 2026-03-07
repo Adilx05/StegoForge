@@ -1,5 +1,6 @@
 # Testing Strategy
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 ## Test project map
 
 - `tests/StegoForge.Tests.Unit`

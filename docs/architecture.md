@@ -1,5 +1,6 @@
 # Architecture
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 ## Goals
 
 StegoForge aims to keep steganography logic modular, testable, and provider-driven so that:
@@ -15,15 +16,15 @@ StegoForge aims to keep steganography logic modular, testable, and provider-driv
   - Provider abstractions (`ICarrierFormatHandler`, `ICryptoProvider`, `ICompressionProvider`)
   - Request/result models and standardized errors.
 - `src/StegoForge.Application`
-  - Use-case orchestration and coordination logic (planned).
+  - Use-case orchestration and coordination logic (implemented).
 - `src/StegoForge.Formats`
-  - Carrier format handlers (planned).
+  - Carrier format handlers (implemented for `png-lsb-v1`, `bmp-lsb-v1`, and `wav-lsb-v1`).
 - `src/StegoForge.Crypto`
-  - Encryption, key derivation, and integrity primitives (planned).
+  - Encryption, key derivation, and integrity primitives (implemented with AES-GCM + PBKDF2).
 - `src/StegoForge.Compression`
-  - Compression pipeline providers (planned).
+  - Compression pipeline providers (implemented with Deflate).
 - `src/StegoForge.Infrastructure`
-  - Cross-cutting wiring and hosting concerns (planned).
+  - Cross-cutting wiring and hosting concerns (implemented).
 - `src/StegoForge.Cli`
   - Command-line entry point.
 - `src/StegoForge.Wpf`

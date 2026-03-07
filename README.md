@@ -1,5 +1,6 @@
 # StegoForge
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 StegoForge is a modular .NET steganography platform for reliable, testable embedding and extraction workflows across image and audio carriers. The repository currently includes working application services, production format handlers (PNG/BMP/WAV), a usable CLI surface, a usable WPF desktop workflow, and a multi-project test suite.
 
 ## Project overview
@@ -22,11 +23,11 @@ This structure enables new formats/providers to be added without coupling transp
 
 Currently implemented and wired through embed/extract/capacity/info flows:
 
-- PNG (`PngLsbFormatHandler`)
-- BMP (`BmpLsbFormatHandler`)
-- WAV (`WavLsbFormatHandler`)
+- PNG (`png-lsb-v1`, `PngLsbFormatHandler`)
+- BMP (`bmp-lsb-v1`, `BmpLsbFormatHandler`)
+- WAV (`wav-lsb-v1`, `WavLsbFormatHandler`)
 
-These handlers are registered in `src/StegoForge.Formats/FormatServiceCollectionExtensions.cs` and covered by both unit and integration tests in `tests/StegoForge.Tests.Unit/*` and `tests/StegoForge.Tests.Integration/*`.
+These handlers are registered in `src/StegoForge.Formats/FormatServiceCollectionExtensions.cs` and covered by both unit and integration tests in `tests/StegoForge.Tests.Unit/` and `tests/StegoForge.Tests.Integration/`.
 
 Future format expansion remains tracked in `docs/roadmap.md`.
 
@@ -158,10 +159,10 @@ Aligned with `docs/roadmap.md` checklists:
 | 2 — Core contract finalization | ✅ Complete |
 | 3 — Payload envelope v1 | ✅ Complete |
 | 4 — Compression provider integration | ✅ Complete |
-| 5 — Crypto provider integration | 🚧 In progress / checklist not yet marked complete |
-| 6 — PNG format handler (v1) | 🚧 Implemented in source/tests but roadmap checklist still unchecked |
-| 7 — BMP format handler | 🚧 Implemented in source/tests but roadmap checklist still unchecked |
-| 8 — WAV format handler | 🚧 Implemented in source/tests but roadmap checklist still unchecked |
+| 5 — Crypto provider integration | ✅ Complete |
+| 6 — PNG format handler (v1) | ✅ Complete (`png-lsb-v1`) |
+| 7 — BMP format handler | ✅ Complete (`bmp-lsb-v1`) |
+| 8 — WAV format handler | ✅ Complete (`wav-lsb-v1`) |
 | 9 — Application orchestration and policy rules | ✅ Complete |
 | 10 — CLI command surface v1 | ✅ Complete |
 | 11 — WPF GUI v1 | ✅ Complete |
@@ -191,7 +192,7 @@ Milestone 12 extends quality gates from correctness into adversarial-resilience 
 - Sensitive material (passwords, plaintext payload bytes, derived keys) is always redacted from CLI/UI/log output.
 - User-facing errors stay actionable but non-secret-bearing, and internal failures are surfaced via stable code/message contracts.
 
-Cross-reference: `docs/testing.md#ci-hardening-strategy`, `docs/testing.md#hardening-and-cancellation-test-guidance`, `docs/architecture.md#processing-hardening-limits`, and `docs/architecture.md#security-logging-policy`.
+Cross-reference: [docs/testing.md#ci-hardening-strategy](docs/testing.md#ci-hardening-strategy), [docs/testing.md#hardening-and-cancellation-test-guidance](docs/testing.md#hardening-and-cancellation-test-guidance), [docs/architecture.md#processing-hardening-limits](docs/architecture.md#processing-hardening-limits), and [docs/architecture.md#security-logging-policy](docs/architecture.md#security-logging-policy).
 
 ## Security & misuse notes
 
