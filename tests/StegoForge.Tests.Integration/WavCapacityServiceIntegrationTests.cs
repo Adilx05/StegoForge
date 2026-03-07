@@ -14,18 +14,32 @@ public sealed class WavCapacityServiceIntegrationTests
     private readonly ICapacityService _service = new CapacityService(new CarrierFormatResolver([new PngLsbFormatHandler(), new BmpLsbFormatHandler(), new WavLsbFormatHandler()]));
 
     [Fact]
-    public async Task GetCapacityAsync_WavCarrier_ResolvesWavHandlerWithDeterministicCapacity()
+    public async Task GetCapacityAsync_WavCarrier_ReturnsExpectedDeterministicCapacityAndOverCapacityDiagnostics()
     {
         var carrierPath = await CreateCarrierFileAsync(sampleCountPerChannel: 4_096, channels: 2);
 
         try
         {
-            var response = await _service.GetCapacityAsync(new CapacityRequest(carrierPath, payloadSizeBytes: 700));
+            var fitResponse = await _service.GetCapacityAsync(new CapacityRequest(carrierPath, payloadSizeBytes: 892));
 
-            Assert.Equal("wav-lsb-v1", response.CarrierFormatId);
-            Assert.Equal(1020, response.MaximumCapacityBytes);
-            Assert.Equal(892, response.SafeUsableCapacityBytes);
-            Assert.True(response.CanEmbed);
+            Assert.Equal("wav-lsb-v1", fitResponse.CarrierFormatId);
+            Assert.Equal(1020, fitResponse.MaximumCapacityBytes);
+            Assert.Equal(892, fitResponse.SafeUsableCapacityBytes);
+            Assert.Equal(128, fitResponse.EstimatedOverheadBytes);
+            Assert.True(fitResponse.CanEmbed);
+            Assert.Equal(0, fitResponse.RemainingBytes);
+            Assert.Null(fitResponse.FailureReason);
+            Assert.Empty(fitResponse.ConstraintBreakdown);
+
+            var overflowResponse = await _service.GetCapacityAsync(new CapacityRequest(carrierPath, payloadSizeBytes: 893));
+
+            Assert.False(overflowResponse.CanEmbed);
+            Assert.Equal(-1, overflowResponse.RemainingBytes);
+            Assert.Equal("Payload exceeds safe wav-lsb-v1 capacity by 1 byte(s).", overflowResponse.FailureReason);
+            Assert.Collection(
+                overflowResponse.ConstraintBreakdown,
+                first => Assert.Equal("Requested payload (893 bytes) exceeds safe usable capacity (892 bytes) by 1 byte(s).", first),
+                second => Assert.Equal("Safe usable capacity = raw embeddable capacity (1020 bytes) - reserved envelope overhead (128 bytes).", second));
         }
         finally
         {
