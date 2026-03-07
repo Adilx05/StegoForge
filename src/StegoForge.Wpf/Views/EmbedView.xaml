@@ -1,0 +1,43 @@
+<UserControl x:Class="StegoForge.Wpf.Views.EmbedView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="420"
+             d:DesignWidth="780">
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="160" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Carrier file" />
+        <TextBox Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" Text="{Binding CarrierPath, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Payload file" />
+        <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" Text="{Binding PayloadPath, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,0,8,8" VerticalAlignment="Center" Text="Output file" />
+        <TextBox Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}" />
+
+        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Content="Check capacity" Width="120" Margin="0,0,8,0" Command="{Binding CheckCapacityCommand}" />
+            <Button Content="Get carrier info" Width="120" Margin="0,0,8,0" Command="{Binding GetInfoCommand}" />
+            <Button Content="Embed" Width="120" Command="{Binding EmbedCommand}" />
+        </StackPanel>
+
+        <TextBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"
+                 Text="{Binding ResultMessage}"
+                 IsReadOnly="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" />
+    </Grid>
+</UserControl>
