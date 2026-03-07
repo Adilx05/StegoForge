@@ -145,3 +145,14 @@ To keep CLI/GUI handling stable, parser failures should map to StegoForge typed 
   - trailing bytes after complete envelope decode
 - `CorruptedDataException` (optional wrapper at higher layers)
   - may be used by extraction orchestration to normalize lower-level payload failures while preserving deterministic `StegoErrorCode` mapping.
+
+
+## PNG carrier limitations and integrity expectations
+
+For PNG-LSB carriers, payload integrity depends on preserving exact pixel-channel least-significant bits after embed. As a result:
+
+- the carrier must remain 8-bit `Rgb` or `RgbWithAlpha`; other color models/bit depths are rejected by the handler,
+- re-encoding through tooling that changes bit depth, palette/indexing, color type, or applies lossy transforms will invalidate embedded payload bits,
+- ancillary metadata/chunk layout is not part of the payload contract and may change across re-saves even when pixel data remains valid.
+
+Testing therefore validates both PNG structural decodability and post-embed extractability as separate requirements. A PNG can be structurally valid yet still contain corrupted envelope bytes, which must surface as deterministic `InvalidHeader`/`InvalidPayload` typed errors at envelope-parse time.

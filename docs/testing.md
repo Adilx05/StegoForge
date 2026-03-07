@@ -98,6 +98,26 @@ The following test cases are required for Milestone 5 completion. Names are inte
 
 Each case should assert both typed exception behavior and mapped `StegoErrorCode` (plus CLI exit code where applicable) so failures remain deterministic across application, integration, and CLI layers.
 
+
+## PNG embed output integrity validation
+
+`PngRoundTripIntegrationTests` validates every embedded PNG through two independent decode/parse paths before extraction assertions run:
+
+1. **Raw IHDR parser in tests** reads PNG signature + IHDR chunk directly from bytes to assert width/height and color-type invariants without ImageSharp metadata helpers.
+2. **ImageSharp identify/load path** runs `Image.Identify` and full `Image.Load` decode to confirm the output can be fully parsed and decoded.
+
+The integration tests assert these invariants for embedded output images:
+
+- dimensions remain unchanged from the carrier image,
+- PNG color-type policy is preserved (`Rgb` remains `Rgb`, `RgbWithAlpha` remains `RgbWithAlpha`),
+- the output PNG is fully decodable with no decoder exceptions,
+- extraction still succeeds from the validated output stream.
+
+Negative-path coverage also intentionally corrupts embedded output bytes (while keeping the PNG structurally decodable) and verifies deterministic typed parser failures:
+
+- corrupted envelope header bytes -> `InvalidHeaderException`,
+- truncated envelope payload bytes -> `InvalidPayloadException`.
+
 ## Test categories to prioritize
 
 1. **Payload framing correctness**

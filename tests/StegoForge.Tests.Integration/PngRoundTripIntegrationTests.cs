@@ -105,6 +105,53 @@ public sealed class PngRoundTripIntegrationTests
         Assert.Equal(StegoErrorCode.WrongPassword, mapped.Code);
     }
 
+    [Fact]
+    public async Task Extract_WhenEmbeddedEnvelopeHeaderIsCorrupted_ThrowsInvalidHeaderException()
+    {
+        var payload = CreateDeterministicPayload(300, seed: 13);
+        var processing = new ProcessingOptions(compressionMode: CompressionMode.Disabled, encryptionMode: EncryptionMode.None);
+        var envelope = _orchestration.CreateEnvelopeForEmbed(payload, processing, PasswordOptions.Optional, passphrase: null);
+        var envelopeBytes = _serializer.Serialize(envelope);
+
+        await using var carrier = await CreateMediumRgbCarrierAsync();
+        await using var stegoCarrier = new MemoryStream();
+        await _formatHandler.EmbedAsync(carrier, stegoCarrier, envelopeBytes);
+
+        var extractedEnvelopeBytes = await _formatHandler.ExtractAsync(stegoCarrier);
+        extractedEnvelopeBytes[0] ^= 0xFF; // Corrupt SGF1 magic.
+
+        await using var corruptedCarrier = await EmbedEnvelopeBytesIntoCarrierAsync(stegoCarrier, extractedEnvelopeBytes, PngColorType.Rgb);
+        var validatedCorruptedCarrier = await ValidateEmbeddedPngAsync(corruptedCarrier, expectedColorType: PngColorType.Rgb, expectedWidth: 128, expectedHeight: 128);
+
+        var extractedFromCorruptedOutput = await _formatHandler.ExtractAsync(validatedCorruptedCarrier);
+
+        var exception = Assert.Throws<InvalidHeaderException>(() => _serializer.Deserialize(extractedFromCorruptedOutput));
+        Assert.Equal(StegoErrorCode.InvalidHeader, exception.Code);
+    }
+
+    [Fact]
+    public async Task Extract_WhenEmbeddedEnvelopePayloadIsTruncated_ThrowsInvalidPayloadException()
+    {
+        var payload = CreateDeterministicPayload(300, seed: 17);
+        var processing = new ProcessingOptions(compressionMode: CompressionMode.Disabled, encryptionMode: EncryptionMode.None);
+        var envelope = _orchestration.CreateEnvelopeForEmbed(payload, processing, PasswordOptions.Optional, passphrase: null);
+        var envelopeBytes = _serializer.Serialize(envelope);
+
+        await using var carrier = await CreateMediumRgbCarrierAsync();
+        await using var stegoCarrier = new MemoryStream();
+        await _formatHandler.EmbedAsync(carrier, stegoCarrier, envelopeBytes);
+
+        var extractedEnvelopeBytes = await _formatHandler.ExtractAsync(stegoCarrier);
+        Array.Resize(ref extractedEnvelopeBytes, extractedEnvelopeBytes.Length - 1);
+
+        await using var corruptedCarrier = await EmbedEnvelopeBytesIntoCarrierAsync(stegoCarrier, extractedEnvelopeBytes, PngColorType.Rgb);
+        var validatedCorruptedCarrier = await ValidateEmbeddedPngAsync(corruptedCarrier, expectedColorType: PngColorType.Rgb, expectedWidth: 128, expectedHeight: 128);
+
+        var extractedFromCorruptedOutput = await _formatHandler.ExtractAsync(validatedCorruptedCarrier);
+        var exception = Assert.Throws<InvalidPayloadException>(() => _serializer.Deserialize(extractedFromCorruptedOutput));
+        Assert.Equal(StegoErrorCode.InvalidPayload, exception.Code);
+    }
+
     private async Task<byte[]> ExecuteRoundTripAsync(
         Func<Task<MemoryStream>> carrierFactory,
         byte[] payload,
@@ -115,14 +162,163 @@ public sealed class PngRoundTripIntegrationTests
         var envelopeBytes = _serializer.Serialize(envelope);
 
         await using var carrier = await carrierFactory();
+        carrier.Position = 0;
+        var (expectedWidth, expectedHeight, expectedColorType) = ReadPngIhdr(carrier);
+
         await using var stegoCarrier = new MemoryStream();
         await _formatHandler.EmbedAsync(carrier, stegoCarrier, envelopeBytes);
 
-        stegoCarrier.Position = 0;
-        var extractedEnvelopeBytes = await _formatHandler.ExtractAsync(stegoCarrier);
+        var validatedCarrier = await ValidateEmbeddedPngAsync(stegoCarrier, expectedColorType, expectedWidth, expectedHeight);
+        var extractedEnvelopeBytes = await _formatHandler.ExtractAsync(validatedCarrier);
         var extractedEnvelope = _serializer.Deserialize(extractedEnvelopeBytes);
 
         return _orchestration.ExtractPayload(extractedEnvelope, processing, PasswordOptions.Optional, passphrase);
+    }
+
+
+
+    private static async Task<MemoryStream> EmbedEnvelopeBytesIntoCarrierAsync(
+        MemoryStream sourceCarrier,
+        byte[] envelopeBytes,
+        PngColorType expectedColorType)
+    {
+        sourceCarrier.Position = 0;
+        using var image = await Image.LoadAsync<Rgba32>(sourceCarrier);
+
+        var framedPayload = new byte[sizeof(int) + envelopeBytes.Length];
+        framedPayload[0] = (byte)((envelopeBytes.Length >> 24) & 0xFF);
+        framedPayload[1] = (byte)((envelopeBytes.Length >> 16) & 0xFF);
+        framedPayload[2] = (byte)((envelopeBytes.Length >> 8) & 0xFF);
+        framedPayload[3] = (byte)(envelopeBytes.Length & 0xFF);
+        envelopeBytes.CopyTo(framedPayload, sizeof(int));
+
+        var bitIndex = 0;
+        var totalBits = framedPayload.Length * 8;
+
+        image.ProcessPixelRows(accessor =>
+        {
+            for (var y = 0; y < accessor.Height && bitIndex < totalBits; y++)
+            {
+                var row = accessor.GetRowSpan(y);
+                for (var x = 0; x < row.Length && bitIndex < totalBits; x++)
+                {
+                    var pixel = row[x];
+                    pixel.R = EmbedBit(pixel.R, framedPayload, bitIndex++);
+                    if (bitIndex < totalBits)
+                    {
+                        pixel.G = EmbedBit(pixel.G, framedPayload, bitIndex++);
+                    }
+
+                    if (bitIndex < totalBits)
+                    {
+                        pixel.B = EmbedBit(pixel.B, framedPayload, bitIndex++);
+                    }
+
+                    row[x] = pixel;
+                }
+            }
+        });
+
+        var output = new MemoryStream();
+        await image.SaveAsPngAsync(output, new PngEncoder
+        {
+            ColorType = expectedColorType,
+            BitDepth = PngBitDepth.Bit8
+        });
+
+        output.Position = 0;
+        return output;
+    }
+
+    private static byte EmbedBit(byte channel, byte[] payload, int bitIndex)
+    {
+        var sourceByte = payload[bitIndex / 8];
+        var sourceBit = (sourceByte >> (7 - (bitIndex % 8))) & 1;
+        return (byte)((channel & 0b1111_1110) | sourceBit);
+    }
+
+    private static async Task<MemoryStream> ValidateEmbeddedPngAsync(
+        MemoryStream embeddedPng,
+        PngColorType expectedColorType,
+        int expectedWidth,
+        int expectedHeight)
+    {
+        embeddedPng.Position = 0;
+        var outputBytes = embeddedPng.ToArray();
+
+        using (var parserStream = new MemoryStream(outputBytes, writable: false))
+        {
+            var (width, height, colorType) = ReadPngIhdr(parserStream);
+            Assert.Equal(expectedWidth, width);
+            Assert.Equal(expectedHeight, height);
+            Assert.Equal(expectedColorType, colorType);
+        }
+
+        using (var identifyStream = new MemoryStream(outputBytes, writable: false))
+        {
+            var imageInfo = Image.Identify(identifyStream);
+            Assert.NotNull(imageInfo);
+            Assert.Equal(expectedWidth, imageInfo!.Width);
+            Assert.Equal(expectedHeight, imageInfo.Height);
+
+            var pngMetadata = imageInfo.Metadata.GetPngMetadata();
+            Assert.Equal(PngBitDepth.Bit8, pngMetadata.BitDepth);
+            Assert.Equal(expectedColorType, pngMetadata.ColorType);
+        }
+
+        using (var decodeStream = new MemoryStream(outputBytes, writable: false))
+        using (var decodedImage = await Image.LoadAsync<Rgba32>(decodeStream))
+        {
+            Assert.Equal(expectedWidth, decodedImage.Width);
+            Assert.Equal(expectedHeight, decodedImage.Height);
+        }
+
+        return new MemoryStream(outputBytes, writable: false);
+    }
+
+    private static (int Width, int Height, PngColorType ColorType) ReadPngIhdr(Stream pngStream)
+    {
+        pngStream.Position = 0;
+        using var reader = new BinaryReader(pngStream, System.Text.Encoding.UTF8, leaveOpen: true);
+
+        var signature = reader.ReadBytes(8);
+        Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, signature);
+
+        var ihdrLength = ReadBigEndianInt32(reader);
+        Assert.Equal(13, ihdrLength);
+
+        var chunkType = reader.ReadBytes(4);
+        Assert.Equal("IHDR"u8.ToArray(), chunkType);
+
+        var width = ReadBigEndianInt32(reader);
+        var height = ReadBigEndianInt32(reader);
+        var bitDepth = reader.ReadByte();
+        var colorTypeByte = reader.ReadByte();
+        _ = reader.ReadByte(); // compression method
+        _ = reader.ReadByte(); // filter method
+        _ = reader.ReadByte(); // interlace method
+        _ = reader.ReadBytes(4); // CRC
+
+        Assert.Equal(8, bitDepth);
+
+        var colorType = colorTypeByte switch
+        {
+            2 => PngColorType.Rgb,
+            6 => PngColorType.RgbWithAlpha,
+            _ => throw new Xunit.Sdk.XunitException($"Unsupported PNG color type byte '{colorTypeByte}'.")
+        };
+
+        return (width, height, colorType);
+    }
+
+    private static int ReadBigEndianInt32(BinaryReader reader)
+    {
+        var bytes = reader.ReadBytes(4);
+        Assert.Equal(4, bytes.Length);
+        return (bytes[0] << 24)
+               | (bytes[1] << 16)
+               | (bytes[2] << 8)
+               | bytes[3];
     }
 
     // Procedurally generated in test code (no external binary fixtures required).
