@@ -9,6 +9,7 @@ using StegoForge.Application.Payload;
 using StegoForge.Application.Validation;
 using StegoForge.Compression.Deflate;
 using StegoForge.Core.Abstractions;
+using StegoForge.Core.Models;
 using StegoForge.Crypto.AesGcm;
 using StegoForge.Formats;
 
@@ -21,6 +22,8 @@ public static class ApplicationServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddStegoForgeFormatHandlers();
+
+        services.TryAddSingleton(ProcessingLimits.SafeDefaults);
 
         services.TryAddSingleton<ICompressionProvider, DeflateCompressionProvider>();
         services.TryAddSingleton<ICryptoProvider, AesGcmCryptoProvider>();

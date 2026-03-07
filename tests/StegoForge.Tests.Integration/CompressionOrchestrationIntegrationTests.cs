@@ -199,6 +199,30 @@ public sealed class CompressionOrchestrationIntegrationTests
         Assert.Contains("Compressed payload is malformed", mappedError.Message);
     }
 
+    [Fact]
+    public void CreateEnvelopeForEmbed_OversizePayload_ThrowsInvalidArgumentsDeterministically()
+    {
+        var limitedService = new PayloadOrchestrationService(
+            new DeflateCompressionProvider(),
+            new AesGcmCryptoProvider(),
+            new ProcessingLimits(maxPayloadBytes: 64, maxHeaderBytes: 1024, maxEnvelopeBytes: 4096));
+
+        var exception = Assert.Throws<InvalidArgumentsException>(() =>
+            limitedService.CreateEnvelopeForEmbed(new byte[128], ProcessingOptions.Default, PasswordOptions.Optional, passphrase: null));
+
+        Assert.Equal(StegoErrorCode.InvalidArguments, StegoErrorMapper.FromException(exception).Code);
+    }
+
+    [Fact]
+    public void CreateEnvelopeForEmbed_PreCanceledToken_ThrowsOperationCanceledException()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            _service.CreateEnvelopeForEmbed(new byte[] { 1, 2, 3 }, ProcessingOptions.Default, PasswordOptions.Optional, passphrase: null, cancellationToken: cts.Token));
+    }
+
     private static byte[] CreateHighlyCompressiblePayload()
     {
         return Enumerable.Repeat((byte)'A', 4096).ToArray();

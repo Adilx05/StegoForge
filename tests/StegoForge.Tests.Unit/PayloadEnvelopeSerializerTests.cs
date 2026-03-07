@@ -1,5 +1,6 @@
 using StegoForge.Application.Payload;
 using StegoForge.Core.Errors;
+using StegoForge.Core.Models;
 using StegoForge.Core.Payload;
 using Xunit;
 
@@ -134,6 +135,37 @@ public sealed class PayloadEnvelopeSerializerTests
         var ex = Assert.Throws<InvalidPayloadException>(() => _serializer.Deserialize(bytes));
 
         AssertMappedCode(ex, StegoErrorCode.InvalidPayload);
+    }
+
+    [Fact]
+    public void Deserialize_DeclaredHeaderLengthBeyondConfiguredLimit_ThrowsWithoutLargeAllocation()
+    {
+        var serializer = new PayloadEnvelopeSerializer(new ProcessingLimits(maxHeaderBytes: 32, maxPayloadBytes: 2048, maxEnvelopeBytes: 4096));
+        var bytes = KnownFixtureEnvelopeBytes();
+        bytes[HeaderLengthOffset] = 0x40;
+        bytes[HeaderLengthOffset + 1] = 0x00;
+
+        var exception = Assert.Throws<InvalidPayloadException>(() => serializer.Deserialize(bytes));
+
+        Assert.Contains("Header length exceeds configured limit", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Serialize_PayloadBeyondConfiguredLimit_ThrowsInvalidPayload()
+    {
+        var serializer = new PayloadEnvelopeSerializer(new ProcessingLimits(maxPayloadBytes: 8, maxHeaderBytes: 128, maxEnvelopeBytes: 256));
+        var fixture = CreateFixtureEnvelope();
+        var envelope = new PayloadEnvelope(
+            fixture.Version,
+            fixture.Flags,
+            fixture.Header,
+            Enumerable.Repeat((byte)0xAB, 16).ToArray(),
+            fixture.IntegrityData,
+            fixture.Magic);
+
+        var exception = Assert.Throws<InvalidPayloadException>(() => serializer.Serialize(envelope));
+
+        Assert.Contains("Payload length exceeds configured limit", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

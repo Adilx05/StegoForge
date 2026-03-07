@@ -364,3 +364,31 @@ Required resolver coverage includes:
 - single matching handler resolution,
 - multiple matching handlers with deterministic precedence selection,
 - no matching handlers producing `UnsupportedFormatException`.
+
+## Hardening and cancellation test guidance
+
+The hardening baseline now includes configurable processing-limit and cancellation-path coverage.
+
+### Default limits under test
+
+The default `ProcessingLimits` contract is:
+
+- `MaxPayloadBytes = 16 MiB`
+- `MaxHeaderBytes = 64 KiB`
+- `MaxEnvelopeBytes = 20 MiB`
+- `MaxCarrierSizeBytes = 128 MiB` (nullable)
+
+When adding tests that exceed these values, construct handlers/services/serializers with explicit low limits so tests remain deterministic and lightweight.
+
+### Required hardening scenarios
+
+- Oversized payload rejection happens before compression/encryption/decompression provider calls.
+- Oversized or malformed envelope length fields are rejected before any large allocations.
+- Format handlers reject over-limit envelope payloads before doing deep embed/extract work.
+- Pre-canceled `CancellationToken` inputs consistently throw `OperationCanceledException` in async format operations.
+
+### Tuning strategy for CI and fuzzing
+
+- Keep CI limits conservative (low memory overhead) and add dedicated stress jobs for larger thresholds.
+- For fuzzing, keep `MaxEnvelopeBytes` low enough to prevent accidental large allocation attempts from mutated length prefixes.
+- Validate error determinism by asserting both typed exceptions and mapped `StegoErrorCode` values when applicable.

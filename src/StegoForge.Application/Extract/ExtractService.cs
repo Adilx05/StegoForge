@@ -33,7 +33,7 @@ public sealed class ExtractService(
         var envelope = envelopeSerializer.Deserialize(envelopeBytes);
 
         var passphrase = policyGate.ResolvePassphrase(request.PasswordOptions);
-        var payload = orchestrationService.ExtractPayload(envelope, request.ProcessingOptions, request.PasswordOptions, passphrase);
+        var payload = orchestrationService.ExtractPayload(envelope, request.ProcessingOptions, request.PasswordOptions, passphrase, cancellationToken);
 
         var warnings = new List<string>();
         var resolvedOutputPath = ResolveOutputPath(request.OutputPath, envelope, warnings);

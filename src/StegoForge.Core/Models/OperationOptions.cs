@@ -127,3 +127,50 @@ public sealed record OperationDiagnostics
         ProviderIdentifier = string.IsNullOrWhiteSpace(providerIdentifier) ? null : providerIdentifier;
     }
 }
+
+public sealed record ProcessingLimits
+{
+    public int MaxPayloadBytes { get; }
+    public int MaxHeaderBytes { get; }
+    public int MaxEnvelopeBytes { get; }
+    public long? MaxCarrierSizeBytes { get; }
+
+    public static ProcessingLimits SafeDefaults { get; } = new();
+
+    public ProcessingLimits(
+        int maxPayloadBytes = 16 * 1024 * 1024,
+        int maxHeaderBytes = 64 * 1024,
+        int maxEnvelopeBytes = 20 * 1024 * 1024,
+        long? maxCarrierSizeBytes = 128L * 1024 * 1024)
+    {
+        if (maxPayloadBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxPayloadBytes), "Maximum payload bytes must be greater than zero.");
+        }
+
+        if (maxHeaderBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxHeaderBytes), "Maximum header bytes must be greater than zero.");
+        }
+
+        if (maxEnvelopeBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxEnvelopeBytes), "Maximum envelope bytes must be greater than zero.");
+        }
+
+        if (maxEnvelopeBytes < maxPayloadBytes)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxEnvelopeBytes), "Maximum envelope bytes must be greater than or equal to maximum payload bytes.");
+        }
+
+        if (maxCarrierSizeBytes is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxCarrierSizeBytes), "Maximum carrier size must be greater than zero when specified.");
+        }
+
+        MaxPayloadBytes = maxPayloadBytes;
+        MaxHeaderBytes = maxHeaderBytes;
+        MaxEnvelopeBytes = maxEnvelopeBytes;
+        MaxCarrierSizeBytes = maxCarrierSizeBytes;
+    }
+}
