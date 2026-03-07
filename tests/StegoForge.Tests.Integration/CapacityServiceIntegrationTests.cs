@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using StegoForge.Application.Capacity;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
+using StegoForge.Application.Formats;
 using StegoForge.Formats.Png;
 using Xunit;
 
@@ -11,7 +12,7 @@ namespace StegoForge.Tests.Integration;
 
 public sealed class CapacityServiceIntegrationTests
 {
-    private readonly ICapacityService _service = new CapacityService(new PngLsbCapacityAnalyzer());
+    private readonly ICapacityService _service = new CapacityService(new CarrierFormatResolver([new PngLsbFormatHandler()]));
 
     [Fact]
     public async Task GetCapacityAsync_PngCarrier_ReturnsExpectedFormatAndCanEmbedDecisions()
@@ -36,7 +37,7 @@ public sealed class CapacityServiceIntegrationTests
 
             Assert.False(overflowResponse.CanEmbed);
             Assert.Equal(-1, overflowResponse.RemainingBytes);
-            Assert.Contains("exceeds safe PNG capacity by 1 byte(s)", overflowResponse.FailureReason);
+            Assert.Contains("exceeds safe png-lsb-v1 capacity by 1 byte(s)", overflowResponse.FailureReason);
             Assert.Contains("exceeds safe usable capacity", overflowResponse.ConstraintBreakdown[0]);
         }
         finally
