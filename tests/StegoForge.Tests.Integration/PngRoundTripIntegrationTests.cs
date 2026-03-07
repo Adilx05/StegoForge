@@ -126,7 +126,7 @@ public sealed class PngRoundTripIntegrationTests
         var extractedFromCorruptedOutput = await _formatHandler.ExtractAsync(validatedCorruptedCarrier);
 
         var exception = Assert.Throws<InvalidHeaderException>(() => _serializer.Deserialize(extractedFromCorruptedOutput));
-        Assert.Equal(StegoErrorCode.InvalidHeader, exception.ErrorCode);
+        Assert.Equal(StegoErrorCode.InvalidHeader, exception.Code);
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public sealed class PngRoundTripIntegrationTests
 
         var extractedFromCorruptedOutput = await _formatHandler.ExtractAsync(validatedCorruptedCarrier);
         var exception = Assert.Throws<InvalidPayloadException>(() => _serializer.Deserialize(extractedFromCorruptedOutput));
-        Assert.Equal(StegoErrorCode.InvalidPayload, exception.ErrorCode);
+        Assert.Equal(StegoErrorCode.InvalidPayload, exception.Code);
     }
 
     private async Task<byte[]> ExecuteRoundTripAsync(
