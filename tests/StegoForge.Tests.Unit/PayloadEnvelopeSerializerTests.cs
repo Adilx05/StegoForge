@@ -154,7 +154,14 @@ public sealed class PayloadEnvelopeSerializerTests
     public void Serialize_PayloadBeyondConfiguredLimit_ThrowsInvalidPayload()
     {
         var serializer = new PayloadEnvelopeSerializer(new ProcessingLimits(maxPayloadBytes: 8, maxHeaderBytes: 128, maxEnvelopeBytes: 256));
-        var envelope = CreateFixtureEnvelope() with { Payload = Enumerable.Repeat((byte)0xAB, 16).ToArray() };
+        var fixture = CreateFixtureEnvelope();
+        var envelope = new PayloadEnvelope(
+            fixture.Version,
+            fixture.Flags,
+            fixture.Header,
+            Enumerable.Repeat((byte)0xAB, 16).ToArray(),
+            fixture.IntegrityData,
+            fixture.Magic);
 
         var exception = Assert.Throws<InvalidPayloadException>(() => serializer.Serialize(envelope));
 

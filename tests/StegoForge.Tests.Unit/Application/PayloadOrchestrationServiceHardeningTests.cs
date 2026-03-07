@@ -69,6 +69,6 @@ public sealed class PayloadOrchestrationServiceHardeningTests
         }
 
         public CryptoDecryptResult Decrypt(CryptoDecryptRequest request)
-            => new(request.Ciphertext, "none", "none");
+            => new(request.Ciphertext);
     }
 }
