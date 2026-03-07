@@ -72,6 +72,20 @@ Milestone 5 locks the pipeline boundary between compression and encryption:
 
 This separation keeps compression behavior deterministic, avoids leaking plaintext metadata into carrier handlers, and ensures authenticated decryption occurs before any decompression is attempted.
 
+## PNG handler v1 scope and unsupported-mode behavior
+
+`PngLsbFormatHandler` (`src/StegoForge.Formats/Png/PngLsbFormatHandler.cs`) defines the current PNG production scope for `png-lsb-v1`:
+
+- supported carriers are PNG files detected by signature/format parser,
+- supported pixel modes are strictly `PngColorType.Rgb` and `PngColorType.RgbWithAlpha`,
+- supported bit depth is strictly 8-bit PNG,
+- only RGB channels are used for payload bits (alpha is preserved but not used for embedding).
+
+Unsupported PNG modes are intentionally fail-fast and deterministic:
+
+- `Supports(...)` returns `false` for unsupported/non-PNG inputs,
+- `GetCapacityAsync`, `EmbedAsync`, `ExtractAsync`, and `GetInfoAsync` call shared validation and throw `UnsupportedFormatException` when input violates PNG v1 policy,
+- deterministic policy checks are locked by unit tests (`Supports_ReturnsFalse_ForUnsupportedGrayscaleColorType`, `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedColorType`).
 
 ## Provider selection strategy and fallback behavior
 

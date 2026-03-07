@@ -65,11 +65,21 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Deliver first production-capable image carrier handler.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- PNG capacity estimation available through `ICapacityService`.
-- Embed/extract round-trips pass for representative files.
-- Output image integrity remains valid and viewable.
+- [ ] `PngLsbFormatHandler` is the production PNG v1 carrier and remains wired for embed/extract/capacity/info in `src/StegoForge.Formats/Png/PngLsbFormatHandler.cs`.
+- [ ] PNG capacity estimations are validated through integration entry points:
+  - `GetCapacityAsync_PngCarrier_ReturnsExpectedFormatAndCanEmbedDecisions` in `tests/StegoForge.Tests.Integration/CapacityServiceIntegrationTests.cs`
+  - deterministic calculator boundaries in `tests/StegoForge.Tests.Unit/Png/PngLsbCapacityCalculatorTests.cs`
+- [ ] PNG round-trip coverage passes for representative processing modes in `tests/StegoForge.Tests.Integration/PngRoundTripIntegrationTests.cs`:
+  - `EmbedExtract_BasicRoundTrip_ProducesByteIdenticalPayload`
+  - `EmbedExtract_EncryptedRoundTrip_ProducesByteIdenticalPayload`
+  - `EmbedExtract_CompressedRoundTrip_ProducesByteIdenticalPayload`
+  - `EmbedExtract_CompressedAndEncryptedRoundTrip_ProducesByteIdenticalPayload`
+- [ ] PNG output validity checks remain enforced in `tests/StegoForge.Tests.Integration/PngRoundTripIntegrationTests.cs` via IHDR parsing + `Image.Identify` + `Image.LoadAsync` path (`ValidateEmbeddedPngAsync`).
+- [ ] Unsupported PNG modes are rejected deterministically by tests:
+  - `Supports_ReturnsFalse_ForUnsupportedGrayscaleColorType`
+  - `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedColorType`
 
 ## Milestone 7 — BMP format handler
 

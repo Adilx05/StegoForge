@@ -46,6 +46,10 @@ When changing compression behavior, run these focused commands before broader su
 
 # Compression orchestration integration tests (policy + envelope metadata/flags)
  dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~CompressionOrchestrationIntegrationTests
+
+# PNG-focused integration tests (v1 acceptance)
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~PngRoundTripIntegrationTests
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~CapacityServiceIntegrationTests
 ```
 
 These commands specifically cover compression provider contract enforcement, compression-mode policy (`Disabled`/`Enabled`/`Automatic`), and deterministic decompression failure behavior.

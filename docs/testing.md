@@ -118,6 +118,33 @@ Negative-path coverage also intentionally corrupts embedded output bytes (while 
 - corrupted envelope header bytes -> `InvalidHeaderException`,
 - truncated envelope payload bytes -> `InvalidPayloadException`.
 
+## PNG v1 acceptance tests
+
+The following tests are the PNG v1 acceptance set and should be referenced by exact name in reviews, roadmap checks, and CI filters.
+
+### Capacity and sizing acceptance
+
+- `GetCapacityAsync_PngCarrier_ReturnsExpectedFormatAndCanEmbedDecisions`
+- `Calculate_TinyImage_ReturnsZeroSafeCapacityAndDeterministicConstraintDiagnostics`
+- `Calculate_ExactFitPayload_CanEmbedWithZeroRemainingHeadroom`
+- `Calculate_OverCapacityByOneByte_ReturnsDeterministicOverflowDiagnostic`
+
+### Round-trip and policy acceptance
+
+- `EmbedExtract_BasicRoundTrip_ProducesByteIdenticalPayload`
+- `EmbedExtract_EncryptedRoundTrip_ProducesByteIdenticalPayload`
+- `EmbedExtract_CompressedRoundTrip_ProducesByteIdenticalPayload`
+- `EmbedExtract_CompressedAndEncryptedRoundTrip_ProducesByteIdenticalPayload`
+- `Embed_WhenCarrierHasInsufficientCapacity_ThrowsDeterministicErrorTypeAndCode`
+- `Extract_EncryptedPayload_WithWrongPassword_MapsToWrongPasswordError`
+
+### Image validity and parser-failure acceptance
+
+- `Extract_WhenEmbeddedEnvelopeHeaderIsCorrupted_ThrowsInvalidHeaderException`
+- `Extract_WhenEmbeddedEnvelopePayloadIsTruncated_ThrowsInvalidPayloadException`
+- `Supports_ReturnsFalse_ForUnsupportedGrayscaleColorType`
+- `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedColorType`
+
 ## Test categories to prioritize
 
 1. **Payload framing correctness**
