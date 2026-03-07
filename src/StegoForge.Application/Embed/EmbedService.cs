@@ -34,7 +34,8 @@ public sealed class EmbedService(
         var envelopeBytes = envelopeSerializer.Serialize(envelope);
 
         await using var carrierStream = File.OpenRead(request.CarrierPath);
-        var handler = formatResolver.Resolve(carrierStream);
+        var resolution = formatResolver.Resolve(carrierStream, request.CarrierPath);
+        var handler = resolution.Handler;
         carrierStream.Position = 0;
 
         await using var outputStream = File.Create(request.OutputPath);
@@ -48,7 +49,8 @@ public sealed class EmbedService(
                 $"Resolved carrier format: {handler.Format}.",
                 $"Payload envelope bytes written: {envelopeBytes.LongLength}.",
                 $"Compression descriptor: {envelope.Header.CompressionDescriptor}.",
-                $"Encryption descriptor: {envelope.Header.EncryptionDescriptor}."
+                $"Encryption descriptor: {envelope.Header.EncryptionDescriptor}.",
+                .. resolution.Notes
             ],
             duration: started.Elapsed,
             algorithmIdentifier: $"cmp:{envelope.Header.CompressionDescriptor}|enc:{envelope.Header.EncryptionDescriptor}",

@@ -244,3 +244,14 @@ Milestone 2 adds contract-stability tests that lock down core API expectations s
 - Ensuring response DTOs always expose diagnostics containers.
 - Enforcing full `StegoForgeException` and `StegoErrorCode` mapper coverage via reflection/data parity checks.
 - Snapshotting key DTO property names used at serialization boundaries for machine-output stability.
+
+
+## Resolver policy coverage
+
+Carrier format selection behavior is contract-tested in unit tests under `tests/StegoForge.Tests.Unit/Application/CarrierFormatResolverTests.cs` and follows the architecture policy documented in `docs/architecture.md` (see **Carrier format resolver selection policy**).
+
+Required resolver coverage includes:
+
+- single matching handler resolution,
+- multiple matching handlers with deterministic precedence selection,
+- no matching handlers producing `UnsupportedFormatException`.

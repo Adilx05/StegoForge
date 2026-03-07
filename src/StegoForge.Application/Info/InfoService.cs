@@ -23,7 +23,8 @@ public sealed class InfoService(
         policyGate.ValidateInfoRequest(request);
 
         await using var stream = File.OpenRead(request.CarrierPath);
-        var handler = formatResolver.Resolve(stream);
+        var resolution = formatResolver.Resolve(stream, request.CarrierPath);
+        var handler = resolution.Handler;
         stream.Position = 0;
 
         var handlerInfo = await handler.GetInfoAsync(stream, cancellationToken).ConfigureAwait(false);
@@ -63,7 +64,7 @@ public sealed class InfoService(
 
         var diagnostics = new OperationDiagnostics(
             warnings: warnings.Count == 0 ? handlerInfo.Diagnostics.Warnings : [.. handlerInfo.Diagnostics.Warnings, .. warnings],
-            notes: [.. notes, $"Resolved carrier format: {handler.Format}."],
+            notes: [.. notes, $"Resolved carrier format: {handler.Format}.", .. resolution.Notes],
             duration: started.Elapsed,
             algorithmIdentifier: algorithmId,
             providerIdentifier: ProviderId);
