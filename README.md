@@ -53,6 +53,8 @@ See:
 
 ## Contributor quickstart
 
+For full contribution workflow and policy requirements, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 Run from repository root.
 
 ### CLI-only / Core (cross-platform)
