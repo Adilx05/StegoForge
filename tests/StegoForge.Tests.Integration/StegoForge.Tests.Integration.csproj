@@ -25,4 +25,5 @@
     <ProjectReference Include="../../src/StegoForge.Crypto/StegoForge.Crypto.csproj" />
     <ProjectReference Include="../../src/StegoForge.Formats/StegoForge.Formats.csproj" />
   </ItemGroup>
+
 </Project>
