@@ -392,7 +392,7 @@ public sealed class OrchestrationConsistencyIntegrationTests
     private static string GetExtension(CarrierType type)
         => type.ToString().ToLowerInvariant();
 
-    private enum CarrierType
+    public enum CarrierType
     {
         Png,
         Bmp,
