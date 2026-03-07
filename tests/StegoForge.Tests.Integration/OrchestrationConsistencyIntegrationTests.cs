@@ -186,7 +186,7 @@ public sealed class OrchestrationConsistencyIntegrationTests
                 new PasswordOptions(PasswordRequirement.Required, PasswordSourceHint.None, "correct-password"))));
 
         var tamperCode = StegoErrorMapper.FromException(tamperException).Code;
-        Assert.Contains(tamperCode, [StegoErrorCode.WrongPassword, StegoErrorCode.CorruptedData, StegoErrorCode.InvalidHeader, StegoErrorCode.InvalidPayload]);
+        Assert.True(tamperCode is StegoErrorCode.WrongPassword or StegoErrorCode.CorruptedData or StegoErrorCode.InvalidHeader or StegoErrorCode.InvalidPayload);
     }
 
     [Fact]
