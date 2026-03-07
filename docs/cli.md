@@ -9,6 +9,12 @@ The CLI app (`src/StegoForge.Cli`) provides scriptable steganography workflows.
 stegoforge <command> [options]
 ```
 
+From repository source (without installing a global tool), use:
+
+```bash
+dotnet run --project src/StegoForge.Cli -- <command> [options]
+```
+
 Commands:
 
 - `embed`
@@ -17,6 +23,17 @@ Commands:
 - `info`
 - `version`
 - `help` (alias to root `--help`)
+
+
+## Supported carriers and scope
+
+CLI operations currently support the production handlers registered in `StegoForge.Formats`:
+
+- PNG (`png-lsb-v1`)
+- BMP (`bmp-lsb-v1`)
+- WAV (`wav-lsb-v1`)
+
+Inputs outside these format scopes (including unsupported carrier variants for each format handler policy) return deterministic `UnsupportedFormat`/`InvalidHeader` style failures mapped to stable CLI exit codes.
 
 ## Commands and examples
 
@@ -31,9 +48,9 @@ stegoforge embed --carrier <carrier-path> --payload <payload-path> --out <output
 Examples:
 
 ```bash
-stegoforge embed --carrier in.png --payload secret.bin --out out.png
-stegoforge embed --carrier in.png --payload secret.bin --out out.png --encrypt required --password "correct horse"
-stegoforge embed --carrier in.png --payload secret.bin --out out.png --compress auto --json
+dotnet run --project src/StegoForge.Cli -- embed --carrier in.png --payload secret.bin --out out.png
+dotnet run --project src/StegoForge.Cli -- embed --carrier in.png --payload secret.bin --out out.png --encrypt required --password "correct horse"
+dotnet run --project src/StegoForge.Cli -- embed --carrier in.png --payload secret.bin --out out.png --compress auto --json
 ```
 
 ### `extract`
@@ -47,9 +64,9 @@ stegoforge extract --carrier <carrier-path> --out <output-path> [--encrypt none|
 Examples:
 
 ```bash
-stegoforge extract --carrier out.png --out recovered.bin
-stegoforge extract --carrier out.png --out recovered.bin --password "correct horse"
-stegoforge extract --carrier out.png --out recovered.bin --json
+dotnet run --project src/StegoForge.Cli -- extract --carrier out.png --out recovered.bin
+dotnet run --project src/StegoForge.Cli -- extract --carrier out.png --out recovered.bin --password "correct horse"
+dotnet run --project src/StegoForge.Cli -- extract --carrier out.png --out recovered.bin --json
 ```
 
 ### `capacity`
@@ -63,9 +80,9 @@ stegoforge capacity --carrier <carrier-path> --payload <bytes> [--encrypt none|o
 Examples:
 
 ```bash
-stegoforge capacity --carrier in.png --payload 1024
-stegoforge capacity --carrier in.wav --payload 65536 --compress auto
-stegoforge capacity --carrier in.png --payload 2048 --json
+dotnet run --project src/StegoForge.Cli -- capacity --carrier in.png --payload 1024
+dotnet run --project src/StegoForge.Cli -- capacity --carrier in.wav --payload 65536 --compress auto
+dotnet run --project src/StegoForge.Cli -- capacity --carrier in.png --payload 2048 --json
 ```
 
 ### `info`
@@ -79,17 +96,17 @@ stegoforge info --carrier <carrier-path> [--encrypt none|optional|required] [--c
 Examples:
 
 ```bash
-stegoforge info --carrier out.png
-stegoforge info --carrier out.png --json
+dotnet run --project src/StegoForge.Cli -- info --carrier out.png
+dotnet run --project src/StegoForge.Cli -- info --carrier out.png --json
 ```
 
 ### `version` and `help`
 
 ```bash
-stegoforge version
-stegoforge version --json
-stegoforge help
-stegoforge --help
+dotnet run --project src/StegoForge.Cli -- version
+dotnet run --project src/StegoForge.Cli -- version --json
+dotnet run --project src/StegoForge.Cli -- help
+dotnet run --project src/StegoForge.Cli -- --help
 ```
 
 ### Option normalization
@@ -199,7 +216,7 @@ This shape is stable for automation.
 Example automation flow:
 
 ```bash
-if stegoforge capacity --carrier in.png --payload 2048 --json >out.json 2>err.json; then
+if dotnet run --project src/StegoForge.Cli -- capacity --carrier in.png --payload 2048 --json >out.json 2>err.json; then
   jq '.canEmbed' out.json
 else
   jq '.code, .message' err.json

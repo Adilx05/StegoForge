@@ -12,7 +12,7 @@ _Last verified against source: 2026-03-07 (`0fd7c07`)._
 - `tests/StegoForge.Tests.Wpf`
   - WPF-level smoke tests where environment permits.
 
-## Quality gates (target)
+## Quality gates (current)
 
 - All test projects pass on CI.
 - Build warnings are reviewed and kept low/noise-free.
@@ -436,7 +436,7 @@ Files: `tests/StegoForge.Tests.Unit/Application/CarrierFormatResolverTests.cs`, 
    - CLI option parsing and clear diagnostics.
    - GUI validation and user feedback consistency.
 
-## Performance and stress checks (planned)
+## Performance and stress checks (backlog)
 
 - Capacity boundary tests (near-max payloads).
 - Large-file memory profile checks.
@@ -529,3 +529,12 @@ When adding tests that exceed these values, construct handlers/services/serializ
 - Keep CI limits conservative (low memory overhead) and add dedicated stress jobs for larger thresholds.
 - For fuzzing, keep `MaxEnvelopeBytes` low enough to prevent accidental large allocation attempts from mutated length prefixes.
 - Validate error determinism by asserting both typed exceptions and mapped `StegoErrorCode` values when applicable.
+
+
+## Milestone 14 documentation verification
+
+Release-readiness documentation is verified for the current source state:
+
+- Verified timestamp: **2026-03-07T00:00:00Z**
+- Scope: `README.md`, `docs/architecture.md`, `docs/building.md`, `docs/testing.md`, `docs/cli.md`, `docs/gui.md`, `docs/payload-format.md`, `docs/roadmap.md`
+- Confirmation: command snippets, CI/release workflow mapping, and supported-format statements align with current PNG/BMP/WAV implementation scope.
