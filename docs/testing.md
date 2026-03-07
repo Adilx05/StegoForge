@@ -44,6 +44,28 @@ dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configurati
 dotnet test StegoForge.sln --configuration Release
 ```
 
+## Critical test matrix (release readiness)
+
+The following suites are **release-critical**. A release candidate is only considered ready when each suite has run under its required trigger and passed.
+
+| Required suite | Trigger | CI workflow/job mapping | Required CI evidence |
+| --- | --- | --- | --- |
+| Unit tests (`StegoForge.Tests.Unit`) | Every PR/push and release cut | `.github/workflows/ci.yml` → `core-cli` (matrix: `ubuntu-latest`, `windows-latest`) → `Test core/CLI projects` | Both matrix lanes green with unit suite included in run log/artifacts |
+| Integration tests (`StegoForge.Tests.Integration`) | Every PR/push and release cut | `.github/workflows/ci.yml` → `core-cli` (matrix: `ubuntu-latest`, `windows-latest`) → `Test core/CLI projects` | Both matrix lanes green with integration suite included in run log/artifacts |
+| CLI tests (`StegoForge.Tests.Cli`) | Every PR/push and release cut | `.github/workflows/ci.yml` → `core-cli` (matrix: `ubuntu-latest`, `windows-latest`) → `Test core/CLI projects` | Both matrix lanes green with CLI suite included in run log/artifacts |
+| WPF tests (`StegoForge.Tests.Wpf`) | Every PR/push and release cut | `.github/workflows/ci.yml` → `wpf` → `Test WPF smoke project` and `Test WPF command-flow subset` | `wpf` job green on `windows-latest` |
+| Hardening suite (bounded) | PR/push/release validation (`github.event_name != 'schedule'`) | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (bounded; PR/push)` and `.github/workflows/ci.yml` → `wpf` → `Test WPF hardening subset (Windows)` | No failures in bounded hardening steps; artifacts/repros reviewed when produced |
+| Hardening suite (full fuzz campaigns) | Scheduled/nightly (`github.event_name == 'schedule'`) | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (full fuzz campaigns; nightly/scheduled)` | Latest scheduled run green for full hardening campaigns |
+
+### Release cut failure conditions
+
+Do **not** cut/publish a release when any of the following conditions hold:
+
+- Any critical suite above is skipped for the trigger where it is required.
+- `Hardening suite (bounded; PR/push)` (or the WPF hardening subset step) has any failure.
+- The Windows WPF lane (`wpf` job) is not green.
+- Required CI status checks are not successful for the commit being released.
+
 ### CI mapping for documented test commands
 
 | Documented command | CI workflow job/step |
@@ -74,6 +96,7 @@ Before a release cut (or milestone-docs sign-off), maintainers should run this d
 - Verify CI checks are green for documentation-linked jobs before release:
   - `.github/workflows/ci.yml`: `core-cli`, `wpf`
   - `.github/workflows/release.yml`: `package-cli`, `package-wpf` (for tag/release validation)
+- CI-doc alignment check: confirm the exact job/step names referenced in this file still match `.github/workflows/ci.yml` (`core-cli`, `wpf`, `Test core/CLI projects`, `Hardening suite (bounded; PR/push)`, `Hardening suite (full fuzz campaigns; nightly/scheduled)`, `Test WPF smoke project`, `Test WPF command-flow subset`, `Test WPF hardening subset (Windows)`).
 - Ensure milestone status language is factual (checked items completed, pending work left unchecked) in `docs/roadmap.md`.
 
 
