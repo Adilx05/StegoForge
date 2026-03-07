@@ -54,6 +54,21 @@ When changing compression behavior, run these focused commands before broader su
 
 These commands specifically cover compression provider contract enforcement, compression-mode policy (`Disabled`/`Enabled`/`Automatic`), and deterministic decompression failure behavior.
 
+
+## BMP-focused test commands
+
+When changing BMP handler behavior, run these targeted commands before broader suites:
+
+```bash
+# BMP unit tests (handler + capacity calculator)
+ dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --filter "FullyQualifiedName~StegoForge.Tests.Unit.Bmp.BmpLsbFormatHandlerTests|FullyQualifiedName~StegoForge.Tests.Unit.Bmp.BmpLsbCapacityCalculatorTests"
+
+# BMP integration tests (capacity service + round-trip flows)
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter "FullyQualifiedName~BmpCapacityServiceIntegrationTests|FullyQualifiedName~BmpRoundTripIntegrationTests"
+```
+
+These commands verify BMP capacity boundaries, deterministic unsupported-format behavior, and end-to-end embed/extract round-trip reliability.
+
 ## WPF-only build/test
 
 > Recommended on Windows with desktop workloads installed.

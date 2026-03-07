@@ -69,6 +69,24 @@ The following tests lock down extraction behavior when compressed envelope paylo
   - Expected mapped error code: `StegoErrorCode.InternalProcessingFailure`
   - Expected CLI exit code: `1`
 
+
+## BMP v1
+
+### Boundary coverage
+
+- `Calculate_TinyImages_ReportZeroAndNearZeroSafeUsableCapacity`
+- `Calculate_ExactFitPayload_ReturnsEmbeddableWithoutDiagnostics`
+- `Calculate_OverCapacityByOneByte_ReturnsDeterministicOverflowDiagnostic`
+- `EmbedAndExtract_RoundTripsExactFitPayload`
+- `EmbedAsync_WhenPayloadExceedsCapacityByOneByte_ThrowsInsufficientCapacity`
+
+### Unsupported-format coverage
+
+- `Supports_ReturnsFalse_ForUnsupportedBitDepth`
+- `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedBitDepth`
+- `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedCompressionMode`
+- `EmbedAsync_ThrowsInvalidHeader_ForTruncatedBmpHeader`
+
 ## Milestone 5 — Crypto wrong-password and tamper matrix
 
 The following test cases are required for Milestone 5 completion. Names are intentionally fixed so roadmap/docs/test reviews can reference them verbatim.

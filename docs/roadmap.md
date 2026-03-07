@@ -85,11 +85,24 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Add a simple uncompressed image carrier for baseline operations.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- BMP handler implements embed/extract/capacity contracts.
-- Handler rejects unsupported pixel formats with deterministic errors.
-- Regression tests cover boundary payload sizes.
+- [ ] `BmpLsbFormatHandler` remains the production BMP v1 carrier and is wired for embed/extract/capacity/info flows in `src/StegoForge.Formats/Bmp/BmpLsbFormatHandler.cs`.
+- [ ] BMP capacity boundaries are covered by deterministic tests:
+  - `Calculate_TinyImages_ReportZeroAndNearZeroSafeUsableCapacity`
+  - `Calculate_ExactFitPayload_ReturnsEmbeddableWithoutDiagnostics`
+  - `Calculate_OverCapacityByOneByte_ReturnsDeterministicOverflowDiagnostic`
+  - `GetCapacityAsync_BmpCarrier_ResolvesBmpHandler`
+  - files: `tests/StegoForge.Tests.Unit/Bmp/BmpLsbCapacityCalculatorTests.cs`, `tests/StegoForge.Tests.Integration/BmpCapacityServiceIntegrationTests.cs`.
+- [ ] BMP round-trip integration coverage passes in `tests/StegoForge.Tests.Integration/BmpRoundTripIntegrationTests.cs`:
+  - `EmbedExtract_SmallBmpFixture_ProducesByteIdenticalRoundTrip`
+  - `EmbedExtract_MediumBmpFixture_ProducesByteIdenticalRoundTrip`
+  - `Extract_CorruptedCarrier_MapsToDeterministicCorruptedDataErrorCode`
+- [ ] Unsupported BMP variants are rejected with deterministic errors in `tests/StegoForge.Tests.Unit/Bmp/BmpLsbFormatHandlerTests.cs`:
+  - `Supports_ReturnsFalse_ForUnsupportedBitDepth`
+  - `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedBitDepth`
+  - `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedCompressionMode`
+  - `EmbedAsync_ThrowsInvalidHeader_ForTruncatedBmpHeader`
 
 ## Milestone 8 — WAV format handler
 
