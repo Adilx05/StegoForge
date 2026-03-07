@@ -1,12 +1,15 @@
+using StegoForge.Application.Formats;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Errors;
 using StegoForge.Core.Models;
-using StegoForge.Formats.Png;
+using StegoForge.Formats.Bmp;
 
 namespace StegoForge.Application.Capacity;
 
-public sealed class CapacityService(PngLsbCapacityAnalyzer pngAnalyzer) : ICapacityService
+public sealed class CapacityService(CarrierFormatResolver formatResolver) : ICapacityService
 {
+    private static readonly BmpLsbCapacityCalculator CapacityCalculator = new();
+
     public async Task<CapacityResponse> GetCapacityAsync(CapacityRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -18,39 +21,41 @@ public sealed class CapacityService(PngLsbCapacityAnalyzer pngAnalyzer) : ICapac
         }
 
         await using var stream = File.OpenRead(request.CarrierPath);
+        var handler = formatResolver.Resolve(stream);
+        stream.Position = 0;
 
-        var analysis = await pngAnalyzer.AnalyzeAsync(
-            stream,
-            requestedPayloadBytes: request.PayloadSizeBytes,
-            reservedEnvelopeOverheadBytes: PngLsbCapacityCalculator.DefaultReservedEnvelopeOverheadBytes,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var maxRawCapacity = await handler.GetCapacityAsync(stream, cancellationToken).ConfigureAwait(false);
+        var estimate = CapacityCalculator.CalculateFromRaw(
+            maxRawCapacity,
+            reservedEnvelopeOverheadBytes: BmpLsbCapacityCalculator.DefaultReservedEnvelopeOverheadBytes,
+            requestedPayloadBytes: request.PayloadSizeBytes);
 
-        var canEmbed = analysis.Estimate.CanEmbedRequestedPayload;
-        var remainingBytes = analysis.Estimate.SafeUsableBytes - request.PayloadSizeBytes;
+        var canEmbed = estimate.CanEmbedRequestedPayload;
+        var remainingBytes = estimate.SafeUsableBytes - request.PayloadSizeBytes;
         var failureReason = canEmbed
             ? null
-            : $"Payload exceeds safe PNG capacity by {request.PayloadSizeBytes - analysis.Estimate.SafeUsableBytes} byte(s).";
+            : $"Payload exceeds safe {handler.Format} capacity by {request.PayloadSizeBytes - estimate.SafeUsableBytes} byte(s).";
 
         var diagnostics = new OperationDiagnostics(
             notes:
             [
-                $"PNG dimensions: {analysis.Width}x{analysis.Height}.",
-                $"LSB channels used: {analysis.ChannelsUsed} (RGB only).",
-                $"PNG color type: {analysis.ColorType}."
+                $"Resolved carrier format: {handler.Format}.",
+                "LSB channels used: 3 (RGB only).",
+                "Safe capacity policy reserves 128 bytes for payload envelope overhead."
             ],
-            providerIdentifier: nameof(PngLsbCapacityAnalyzer));
+            providerIdentifier: nameof(CarrierFormatResolver));
 
         return new CapacityResponse(
-            carrierFormatId: "png-lsb-v1",
+            carrierFormatId: handler.Format,
             requestedPayloadSizeBytes: request.PayloadSizeBytes,
-            availableCapacityBytes: analysis.Estimate.SafeUsableBytes,
-            maximumCapacityBytes: analysis.Estimate.MaximumRawEmbeddableBytes,
-            safeUsableCapacityBytes: analysis.Estimate.SafeUsableBytes,
-            estimatedOverheadBytes: analysis.Estimate.ReservedEnvelopeOverheadBytes,
+            availableCapacityBytes: estimate.SafeUsableBytes,
+            maximumCapacityBytes: estimate.MaximumRawEmbeddableBytes,
+            safeUsableCapacityBytes: estimate.SafeUsableBytes,
+            estimatedOverheadBytes: estimate.ReservedEnvelopeOverheadBytes,
             canEmbed: canEmbed,
             remainingBytes: remainingBytes,
             failureReason: failureReason,
-            constraintBreakdown: analysis.Estimate.ConstraintDiagnostics,
+            constraintBreakdown: estimate.ConstraintDiagnostics,
             diagnostics: diagnostics);
     }
 }
