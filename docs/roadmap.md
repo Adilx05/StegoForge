@@ -245,11 +245,17 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Prepare stable release candidate and publish artifacts.
 
-**Acceptance criteria:**
+**Acceptance criteria (release-candidate gate checklist):**
 
-- Versioning/changelog/release notes process is documented and executed.
-- [x] `CHANGELOG.md` exists at repository root and includes release + migration-notes sections.
-- [x] Maintainer release note template exists at `.github/release-template.md`.
-- [x] Release workflow metadata validation is implemented in `.github/workflows/release.yml` (tag/version/changelog summary gating).
-- All critical tests pass in CI across required platforms.
-- Signed binaries/packages and verification instructions are published.
+- [ ] Version/changelog artifacts are prepared for the target version:
+  - [ ] `CHANGELOG.md` contains a heading for the exact release version and includes migration notes (or `None`).
+  - [ ] `.github/release-template.md` sections are filled for the release notes draft.
+  - [ ] `.github/workflows/release.yml` dispatch inputs are set with matching `tag` (`vX.Y.Z`), `version` (`X.Y.Z`), and non-empty `changelog_summary`.
+- [ ] CI critical matrix pass criteria are satisfied in `.github/workflows/ci.yml` for the commit being tagged:
+  - [ ] `core-cli` job passes on both matrix lanes: `ubuntu-latest` and `windows-latest`.
+  - [ ] `wpf` job passes on `windows-latest`.
+  - [ ] Hardening steps pass with no failures for the required trigger (`Hardening suite (bounded; PR/push)` and `Test WPF hardening subset (Windows)`).
+- [ ] Release packaging, signing, and publication steps pass in `.github/workflows/release.yml`:
+  - [ ] `package-cli` uploads `stegoforge-cli-<tag>-linux-x64.tar.gz`, `.sha256`, `.tar.gz.sig`, and `.sha256.sig`.
+  - [ ] `package-wpf` uploads `stegoforge-wpf-<tag>-windows-x64.zip`, `.sha256`, `.zip.sig`, and `.sha256.sig`.
+  - [ ] `publish-release` publishes release assets including `stegoforge-cosign.pub` and verification instructions remain current in `docs/building.md`.
