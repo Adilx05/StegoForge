@@ -87,6 +87,51 @@ The following tests lock down extraction behavior when compressed envelope paylo
 - `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedCompressionMode`
 - `EmbedAsync_ThrowsInvalidHeader_ForTruncatedBmpHeader`
 
+
+## WAV v1
+
+Acceptance criteria traceability for WAV carrier support (`wav-lsb-v1`) and deterministic failure behavior.
+
+### Supported carrier implementation (`WavLsbFormatHandler`)
+
+- Implementation file: `src/StegoForge.Formats/Wav/WavLsbFormatHandler.cs`
+- v1 supported set: RIFF/WAVE, `fmt` format tag `1` (PCM), 16-bit little-endian samples, mono/stereo channels, aligned `data` chunk.
+
+### Capacity acceptance coverage
+
+- `CalculateFromSampleCount_TinyCarrier_ReturnsZeroSafeCapacityWithDeterministicDiagnostics`
+  - Covers tiny-carrier floor behavior (`0` safe bytes) plus deterministic diagnostics text.
+- `CalculateFromSampleCount_ExactFitPayload_CanEmbedWithoutDiagnostics`
+  - Covers exact-fit payload acceptance with no constraint diagnostics.
+- `CalculateFromSampleCount_OverflowByOneByte_ReturnsDeterministicDiagnostics`
+  - Covers boundary overflow (+1 byte) deterministic rejection and diagnostic detail.
+- `GetCapacityAsync_WavCarrier_ReturnsExpectedDeterministicCapacityAndOverCapacityDiagnostics`
+  - Covers integration-level `capacity` behavior and over-capacity diagnostics through application services.
+
+### Round-trip acceptance coverage
+
+- `EmbedExtract_BaselineRoundTrip_ProducesByteIdenticalPayload`
+  - Covers unencrypted/uncompressed embed→extract byte-identical behavior.
+- `EmbedExtract_CompressedRoundTrip_ProducesByteIdenticalPayload`
+  - Covers compression-enabled WAV round trip.
+- `EmbedExtract_EncryptedRoundTrip_ProducesByteIdenticalPayload`
+  - Covers encryption-enabled WAV round trip.
+- `EmbedExtract_EncryptedAndCompressedRoundTrip_ProducesByteIdenticalPayload`
+  - Covers combined compression+encryption WAV round trip.
+
+### Unsupported-format and malformed-header acceptance coverage
+
+- `EmbedAsync_WithNonPcmFormatTag_ThrowsUnsupportedFormat`
+  - Covers non-PCM rejection (`UnsupportedFormat`).
+- `ExtractAsync_WithUnsupportedBitDepth_ThrowsUnsupportedFormat`
+  - Covers unsupported bit-depth rejection (`UnsupportedFormat`).
+- `GetCapacityAsync_WithTruncatedHeader_ThrowsInvalidHeader`
+  - Covers truncated RIFF/WAVE header rejection (`InvalidHeader`).
+- `GetCapacityAsync_WithMissingRequiredChunks_ThrowsInvalidHeader`
+  - Covers missing mandatory chunk layout rejection (`InvalidHeader`).
+- `GetCapacityAsync_WithMissingDataChunk_ThrowsInvalidHeader`
+  - Covers missing `data` chunk rejection (`InvalidHeader`).
+
 ## Milestone 5 — Crypto wrong-password and tamper matrix
 
 The following test cases are required for Milestone 5 completion. Names are intentionally fixed so roadmap/docs/test reviews can reference them verbatim.

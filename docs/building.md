@@ -74,14 +74,17 @@ These commands verify BMP capacity boundaries, deterministic unsupported-format 
 When changing WAV handler behavior, run these targeted commands before broader suites:
 
 ```bash
-# WAV handler unit tests (round-trip + strict format validation)
- dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --filter "FullyQualifiedName~StegoForge.Tests.Unit.Wav.WavLsbFormatHandlerTests|FullyQualifiedName~StegoForge.Tests.Unit.Wav.WavLsbFormatValidationTests"
+# WAV unit tests (handler, capacity calculator, and strict format validation)
+ dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --filter "FullyQualifiedName~StegoForge.Tests.Unit.Wav.WavLsbFormatHandlerTests|FullyQualifiedName~StegoForge.Tests.Unit.Wav.WavLsbCapacityCalculatorTests|FullyQualifiedName~StegoForge.Tests.Unit.Wav.WavLsbFormatValidationTests"
 
-# WAV integration tests (capacity service behavior)
- dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~WavCapacityServiceIntegrationTests
+# WAV integration tests (capacity service + end-to-end round-trip behavior)
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter "FullyQualifiedName~WavCapacityServiceIntegrationTests|FullyQualifiedName~WavRoundTripIntegrationTests"
+
+# Optional: run only WAV round-trip integration acceptance set
+ dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --filter FullyQualifiedName~WavRoundTripIntegrationTests
 ```
 
-These commands verify supported-format constraints, deterministic typed exceptions for unsupported/malformed WAVs, and integration-level capacity behavior.
+These commands verify deterministic capacity boundaries, WAV embed/extract round-trip reliability (baseline/compressed/encrypted), and strict unsupported-format/invalid-header handling.
 
 ## WPF-only build/test
 

@@ -108,11 +108,27 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Expand support to PCM audio carriers.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- WAV handler supports targeted PCM formats and documents limits.
-- Capacity and round-trip correctness validated by integration tests.
-- Non-PCM/unhandled variants are rejected safely.
+- [ ] `WavLsbFormatHandler` remains the production WAV v1 carrier and is wired for embed/extract/capacity/info flows in `src/StegoForge.Formats/Wav/WavLsbFormatHandler.cs`.
+- [ ] WAV capacity boundaries are covered by deterministic tests:
+  - `CalculateFromSampleCount_TinyCarrier_ReturnsZeroSafeCapacityWithDeterministicDiagnostics`
+  - `CalculateFromSampleCount_ExactFitPayload_CanEmbedWithoutDiagnostics`
+  - `CalculateFromSampleCount_OverflowByOneByte_ReturnsDeterministicDiagnostics`
+  - `GetCapacityAsync_WavCarrier_ReturnsExpectedDeterministicCapacityAndOverCapacityDiagnostics`
+  - files: `tests/StegoForge.Tests.Unit/Wav/WavLsbCapacityCalculatorTests.cs`, `tests/StegoForge.Tests.Integration/WavCapacityServiceIntegrationTests.cs`.
+- [ ] WAV round-trip integration coverage passes in `tests/StegoForge.Tests.Integration/WavRoundTripIntegrationTests.cs`:
+  - `EmbedExtract_BaselineRoundTrip_ProducesByteIdenticalPayload`
+  - `EmbedExtract_CompressedRoundTrip_ProducesByteIdenticalPayload`
+  - `EmbedExtract_EncryptedRoundTrip_ProducesByteIdenticalPayload`
+  - `EmbedExtract_EncryptedAndCompressedRoundTrip_ProducesByteIdenticalPayload`
+- [ ] Unsupported-format and malformed-carrier WAV variants are rejected with deterministic errors:
+  - `EmbedAsync_WithNonPcmFormatTag_ThrowsUnsupportedFormat`
+  - `ExtractAsync_WithUnsupportedBitDepth_ThrowsUnsupportedFormat`
+  - `GetCapacityAsync_WithTruncatedHeader_ThrowsInvalidHeader`
+  - `GetCapacityAsync_WithMissingRequiredChunks_ThrowsInvalidHeader`
+  - `GetCapacityAsync_WithMissingDataChunk_ThrowsInvalidHeader`
+  - file: `tests/StegoForge.Tests.Unit/Wav/WavLsbFormatValidationTests.cs`.
 
 ## Milestone 9 — Application orchestration and policy rules
 

@@ -77,7 +77,24 @@ printf '%s' "$STEGOFORGE_PASSWORD" | stegoforge extract --carrier out.png --out 
 
 stegoforge capacity --carrier in.png
 stegoforge info --carrier out.png
+
+# WAV carrier examples (v1)
+stegoforge embed --carrier in.wav --payload secret.bin --out out.wav \
+  --encrypt off
+
+stegoforge extract --carrier out.wav --out recovered.bin
+
+stegoforge capacity --carrier in.wav
 ```
+
+## WAV v1 limitations
+
+- WAV support is currently limited to `wav-lsb-v1` carrier constraints used by `WavLsbFormatHandler`:
+  - RIFF/WAVE container with required `fmt` and `data` chunks.
+  - `fmt` format tag `1` (PCM) only.
+  - 16-bit little-endian samples only.
+  - Mono or stereo channel layouts only.
+- Non-PCM, unsupported bit depths, and malformed/missing required chunks are rejected deterministically as unsupported-format or invalid-header failures.
 
 ## Current status
 
