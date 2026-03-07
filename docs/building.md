@@ -195,3 +195,32 @@ These commands verify deterministic capacity boundaries, WAV embed/extract round
 
 - If WPF targets fail on non-Windows hosts, build/test CLI/core/integration projects separately.
 - Keep local SDK aligned with `global.json` to avoid restore/build drift.
+
+
+## Release process
+
+StegoForge release operations follow SemVer and are executed via `.github/workflows/release.yml` using explicit metadata inputs.
+
+### Version bump rules (SemVer policy)
+
+- **MAJOR (`X.0.0`)**: breaking changes to public contracts/compatibility guarantees.
+- **MINOR (`X.Y.0`)**: backward-compatible feature additions.
+- **PATCH (`X.Y.Z`)**: backward-compatible fixes, hardening updates, and docs-only maintenance releases.
+
+### Required tag format
+
+- Tags must match `vX.Y.Z`.
+- Workflow input validation enforces:
+  - `tag` matches `^v\d+\.\d+\.\d+$`
+  - `version` matches `^\d+\.\d+\.\d+$`
+  - `tag == v{version}`
+
+### Changelog/release metadata requirements
+
+Before dispatching a release:
+
+1. Update `CHANGELOG.md` with a section for the release version.
+2. Add categorized release notes and migration notes (or `None`).
+3. Provide a non-empty `changelog_summary` workflow input.
+
+The workflow fails fast if any required release metadata is missing or if `CHANGELOG.md` does not contain the requested version heading.

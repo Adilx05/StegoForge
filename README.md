@@ -125,6 +125,31 @@ Environment caveats:
 - WPF build/test/publish requires Windows.
 - Full hardening fuzz campaigns (`Campaign=Fuzz-Full`) are intentionally scheduled-only in CI and may be long-running locally.
 
+
+## Release process
+
+StegoForge uses **Semantic Versioning (SemVer)** for all tagged releases.
+
+### Version bump rules (SemVer policy)
+
+- **MAJOR (`X.0.0`)**: increment when introducing breaking API/contract/behavior changes (including CLI contract breaks, payload format incompatibility, or incompatible defaults).
+- **MINOR (`X.Y.0`)**: increment for backward-compatible features and additive capabilities.
+- **PATCH (`X.Y.Z`)**: increment for backward-compatible bug fixes, hardening, and documentation-only release adjustments that do not change public contracts.
+
+When uncertain between MINOR/PATCH, default to MINOR only if a user-observable capability is added; otherwise PATCH.
+
+### Tag format
+
+- Release tags **must** use the exact format `vX.Y.Z` (example: `v1.2.3`).
+- The workflow validates the tag and version metadata and fails if `tag != v{version}`.
+
+### Changelog expectations
+
+- Every release must update `CHANGELOG.md` before tagging.
+- Add a dedicated heading for the release version and date, with categorized bullets (Added/Changed/Fixed/Security as applicable).
+- Include a **Migration notes** subsection for each release; if no action is required, explicitly state `None`.
+- The release workflow validates that the release version has a corresponding section in `CHANGELOG.md` and that a changelog summary is provided as workflow metadata.
+
 ## CLI command status
 
 Implemented root commands:

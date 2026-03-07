@@ -248,5 +248,8 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 **Acceptance criteria:**
 
 - Versioning/changelog/release notes process is documented and executed.
+- [x] `CHANGELOG.md` exists at repository root and includes release + migration-notes sections.
+- [x] Maintainer release note template exists at `.github/release-template.md`.
+- [x] Release workflow metadata validation is implemented in `.github/workflows/release.yml` (tag/version/changelog summary gating).
 - All critical tests pass in CI across required platforms.
 - Signed binaries/packages and verification instructions are published.
