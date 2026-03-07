@@ -7,7 +7,7 @@ internal sealed class JsonOutputFormatter(TextWriter stdout, TextWriter stderr) 
 {
     public async Task WriteSuccessAsync(ICommandOutput output, CancellationToken cancellationToken = default)
     {
-        await stdout.WriteLineAsync(JsonSerializer.Serialize(output, JsonOptions)).ConfigureAwait(false);
+        await stdout.WriteLineAsync(JsonSerializer.Serialize(output, output.GetType(), JsonOptions)).ConfigureAwait(false);
     }
 
     public async Task WriteFailureAsync(CliCommandFailure failure, CancellationToken cancellationToken = default)
