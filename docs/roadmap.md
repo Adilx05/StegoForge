@@ -247,6 +247,10 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Acceptance criteria (release-candidate gate checklist):**
 
+- [x] Release-readiness documentation is finalized for Milestone 14:
+  - [x] `README.md`, `docs/building.md`, and `docs/testing.md` describe the current release gate criteria and verification workflow names/step names.
+  - [x] `.github/release-template.md` and `.github/workflows/release.yml` references in docs align with existing release workflow behavior.
+  - [x] Milestone 14 documentation verification timestamp recorded as `2026-03-07T00:00:00Z`.
 - [ ] Version/changelog artifacts are prepared for the target version:
   - [ ] `CHANGELOG.md` contains a heading for the exact release version and includes migration notes (or `None`).
   - [ ] `.github/release-template.md` sections are filled for the release notes draft.

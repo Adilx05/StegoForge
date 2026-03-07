@@ -13,6 +13,7 @@ The format is based on Keep a Changelog principles, with release versions tracke
 
 ### Changed
 - Release workflow now requires explicit release metadata input and validates tag/version/changelog consistency.
+- Milestone 14 release-readiness documentation verification pass completed for `README.md` and `docs/` with timestamp `2026-03-07T00:00:00Z`, including CLI command snippet, supported-format scope (PNG/BMP/WAV), and CI/release mapping validation.
 
 ### Migration notes
 - None.

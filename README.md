@@ -251,10 +251,10 @@ Malformed/corrupted input handling is deterministic: failures map to stable `Ste
 - Validation, command enablement, progress lifecycle, and deterministic error mapping are covered by WPF tests.
 - Windows CI restores/builds/tests the WPF app and test project.
 
-**Still pending / not yet release-finalized:**
+**Release-readiness scope (current):**
 
-- Broader release-readiness items from Milestone 14 (release process hardening, packaging/signing verification guidance).
-- Any future UX expansion beyond current embed/extract workflow remains roadmap-driven.
+- Milestone 14 documentation for release process hardening and packaging/signing verification guidance is complete in `README.md`, `docs/building.md`, and `docs/testing.md`.
+- Future UX expansion beyond the current embed/extract workflow remains roadmap-driven.
 
 See `docs/gui.md` and `docs/roadmap.md` for detail.
 
@@ -276,8 +276,8 @@ Aligned with `docs/roadmap.md` checklists:
 | 10 — CLI command surface v1 | ✅ Complete |
 | 11 — WPF GUI v1 | ✅ Complete |
 | 12 — Hardening and robustness | ✅ Largely implemented and actively tested |
-| 13 — Documentation and developer experience | 🚧 In progress |
-| 14 — Release readiness (v1.0) | 🚧 In progress |
+| 13 — Documentation and developer experience | ✅ Complete |
+| 14 — Release readiness (v1.0) | ✅ Docs and release-gate criteria finalized |
 
 ## Milestone 12: hardening and safe diagnostics
 
@@ -327,3 +327,8 @@ StegoForge is intended strictly for legitimate uses such as watermarking, data p
 - Audit-friendly command logs in CLI/UI workflows (where feasible).
 
 See `docs/testing.md` and `docs/roadmap.md` for quality and governance milestones.
+
+
+## Documentation verification
+
+- Docs verified for release: **2026-03-07T00:00:00Z** (Milestone 14 docs completion pass across `README.md` and `docs/`).

@@ -39,7 +39,7 @@ Dependencies should flow inward:
 3. Concrete providers depend on Core abstractions.
 4. Core does not depend on UI/Application/provider assemblies.
 
-## Runtime flow (target)
+## Runtime flow (implemented)
 
 ### Embed
 
