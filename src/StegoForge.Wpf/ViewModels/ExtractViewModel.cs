@@ -147,16 +147,16 @@ public sealed class ExtractViewModel : OperationViewModelBase
         return TryApplyDroppedPath(path, IsValidOutputDropPath, x => OutputPath = x, "Dropped output path is invalid.");
     }
 
-    private async Task BrowseCarrierAsync()
+    private Task BrowseCarrierAsync()
     {
         CarrierPath = _fileDialogService.SelectCarrierPath(CarrierPath) ?? CarrierPath;
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
-    private async Task BrowseOutputAsync()
+    private Task BrowseOutputAsync()
     {
         OutputPath = _fileDialogService.SelectExtractOutputPath(OutputPath) ?? OutputPath;
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     private async Task ExtractAsync()
