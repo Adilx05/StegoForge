@@ -89,8 +89,11 @@ jobs:
           dotnet build src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --no-restore
           dotnet build tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-restore
 
-      - name: Test WPF projects
-        run: dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --logger "trx;LogFileName=wpf.trx" --results-directory TestResults
+      - name: Test WPF smoke project
+        run: dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --logger "trx;LogFileName=wpf-smoke.trx" --results-directory TestResults
+
+      - name: Test WPF command-flow subset
+        run: dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --filter "FullyQualifiedName~WpfCommandFlowTests" --logger "trx;LogFileName=wpf-command-flow.trx" --results-directory TestResults
 
       - name: Upload WPF test artifacts
         if: always()
