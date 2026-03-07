@@ -13,6 +13,8 @@ namespace StegoForge.Tests.Cli;
 
 public sealed class CliCommandIntegrationTests
 {
+    private static readonly SemaphoreSlim ConsoleCaptureLock = new(initialCount: 1, maxCount: 1);
+
     [Fact]
     public async Task Embed_Succeeds_WithPngCarrier()
     {
@@ -206,6 +208,8 @@ public sealed class CliCommandIntegrationTests
             .AddStegoForgeApplicationServices()
             .BuildServiceProvider();
 
+        await ConsoleCaptureLock.WaitAsync();
+
         var stdoutWriter = new StringWriter();
         var stderrWriter = new StringWriter();
         var originalOut = Console.Out;
@@ -223,6 +227,7 @@ public sealed class CliCommandIntegrationTests
         {
             Console.SetOut(originalOut);
             Console.SetError(originalErr);
+            ConsoleCaptureLock.Release();
         }
     }
 
