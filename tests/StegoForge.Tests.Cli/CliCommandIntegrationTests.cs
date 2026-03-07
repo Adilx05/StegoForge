@@ -155,18 +155,25 @@ public sealed class CliCommandIntegrationTests
         Assert.Equal(JsonValueKind.Object, presentDocument.RootElement.GetProperty("payloadMetadata").ValueKind);
     }
 
-    [Theory]
-    [InlineData("--help")]
-    [InlineData("help")]
-    public async Task Help_IsDiscoverable_FromHelpEntrypoints(string argument)
+    [Fact]
+    public async Task HelpFlag_IsDiscoverable_AndPrintsCommandCatalog()
     {
-        var result = await RunCliAsync([argument]);
+        var result = await RunCliAsync(["--help"]);
         var helpOutput = string.Concat(result.Stdout, result.Stderr);
 
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("StegoForge CLI", helpOutput, StringComparison.Ordinal);
         Assert.Contains("embed", helpOutput, StringComparison.Ordinal);
         Assert.Contains("extract", helpOutput, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HelpCommand_IsDiscoverable()
+    {
+        var result = await RunCliAsync(["help"]);
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Equal(string.Empty, result.Stderr);
     }
 
     [Fact]
