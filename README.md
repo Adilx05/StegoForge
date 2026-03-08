@@ -69,6 +69,12 @@ When building locally **without a matching release tag**, MinVer emits a sensibl
 
 For full contribution workflow and policy requirements, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Website docs and deployment
+
+The Astro-based project website lives in [`website/`](website/). For local development, content editing (hero/features/roadmap/links), and deployment/base-path details, see [`website/README.md`](website/README.md).
+
+GitHub Pages deployments are handled by [`.github/workflows/pages.yml`](.github/workflows/pages.yml), which sets `BASE_PATH` from `actions/configure-pages` so production builds use the correct repository subpath automatically. For custom domains, set `BASE_PATH=/`.
+
 Run from repository root.
 
 ### CLI-only / Core (cross-platform)
