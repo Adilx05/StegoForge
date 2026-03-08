@@ -220,7 +220,7 @@ jobs:
             dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256.sig
             dist/stegoforge-cosign.pub
 
-  package-wpf:
+   package-wpf:
     name: Package WPF
     runs-on: windows-latest
     needs: [validate-release-metadata, verify-ci-status-checks]
@@ -271,6 +271,7 @@ jobs:
           New-Item -ItemType Directory -Path dist -Force | Out-Null
           $artifactBase = "stegoforge-wpf-$env:TAG-windows-x64"
           $artifactName = "$artifactBase.zip"
+
           Compress-Archive -Path artifacts/wpf/* -DestinationPath "dist/$artifactName" -CompressionLevel Optimal -Force
 
           $hash = (Get-FileHash -Path "dist/$artifactName" -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -288,10 +289,33 @@ jobs:
           }
 
           $artifactBase = "stegoforge-wpf-$env:TAG-windows-x64"
-          Set-Content -Path cosign.key -Value $env:COSIGN_PRIVATE_KEY -NoNewline
-          cosign public-key --key cosign.key | Set-Content -Path dist/stegoforge-cosign.pub -NoNewline
-          cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.zip.sig" "dist/$artifactBase.zip"
-          cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.sha256.sig" "dist/$artifactBase.sha256"
+
+          [System.IO.File]::WriteAllText(
+            "cosign.key",
+            $env:COSIGN_PRIVATE_KEY,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          $publicKey = & cosign public-key --key cosign.key
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($publicKey)) {
+            throw "Failed to generate cosign public key."
+          }
+
+          [System.IO.File]::WriteAllText(
+            "dist/stegoforge-cosign.pub",
+            $publicKey,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          & cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.zip.sig" "dist/$artifactBase.zip"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to sign $artifactBase.zip"
+          }
+
+          & cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.sha256.sig" "dist/$artifactBase.sha256"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to sign $artifactBase.sha256"
+          }
 
       - name: Validate WPF checksum/signatures
         shell: pwsh
@@ -299,20 +323,43 @@ jobs:
           TAG: ${{ needs.validate-release-metadata.outputs.tag }}
         run: |
           $artifactBase = "stegoforge-wpf-$env:TAG-windows-x64"
-          $line = Get-Content -Path "dist/$artifactBase.sha256" -Raw
+          $checksumPath = "dist/$artifactBase.sha256"
+          $zipPath = "dist/$artifactBase.zip"
+          $pubPath = "dist/stegoforge-cosign.pub"
+
+          $line = Get-Content -Path $checksumPath -Raw
           $parts = $line.Split('*', 2)
+
           if ($parts.Count -ne 2) {
-            throw "Invalid checksum manifest format in dist/$artifactBase.sha256"
+            throw "Invalid checksum manifest format in $checksumPath"
           }
 
           $expected = $parts[0].Trim().ToLowerInvariant()
-          $actual = (Get-FileHash -Path "dist/$($parts[1].Trim())" -Algorithm SHA256).Hash.ToLowerInvariant()
+          $fileName = $parts[1].Trim()
+          $actual = (Get-FileHash -Path "dist/$fileName" -Algorithm SHA256).Hash.ToLowerInvariant()
+
           if ($expected -ne $actual) {
             throw "Checksum mismatch for $artifactBase.zip"
           }
 
-          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/$artifactBase.zip.sig" "dist/$artifactBase.zip"
-          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/$artifactBase.sha256.sig" "dist/$artifactBase.sha256"
+          if (-not (Test-Path $pubPath)) {
+            throw "Missing cosign public key: $pubPath"
+          }
+
+          $pubPreview = Get-Content -Path $pubPath -Raw
+          if ($pubPreview -notmatch "BEGIN PUBLIC KEY") {
+            throw "Cosign public key file is not valid PEM content."
+          }
+
+          & cosign verify-blob --key $pubPath --signature "dist/$artifactBase.zip.sig" $zipPath
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to verify $artifactBase.zip signature"
+          }
+
+          & cosign verify-blob --key $pubPath --signature "dist/$artifactBase.sha256.sig" $checksumPath
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to verify $artifactBase.sha256 signature"
+          }
 
       - name: Upload WPF release assets
         uses: actions/upload-artifact@v4
