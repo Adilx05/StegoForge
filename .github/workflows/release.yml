@@ -65,7 +65,7 @@ jobs:
             exit 1
           fi
 
-          if ! rg -n "^## \[$version\]" CHANGELOG.md > /dev/null; then
+          if ! grep -Eq "^## \[$version\]" CHANGELOG.md; then
             echo "CHANGELOG.md is missing heading for version $version."
             exit 1
           fi
