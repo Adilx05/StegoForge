@@ -63,7 +63,7 @@
         </StackPanel>
 
         <TextBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"
-                 Text="{Binding ResultMessage}"
+                 Text="{Binding ResultMessage, Mode=OneWay}"
                  IsReadOnly="True"
                  TextWrapping="Wrap"
                  VerticalScrollBarVisibility="Auto" />
