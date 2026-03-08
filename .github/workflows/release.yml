@@ -288,8 +288,22 @@ jobs:
           }
 
           $artifactBase = "stegoforge-wpf-$env:TAG-windows-x64"
-          Set-Content -Path cosign.key -Value $env:COSIGN_PRIVATE_KEY -NoNewline
-          cosign public-key --key cosign.key | Set-Content -Path dist/stegoforge-cosign.pub -NoNewline
+          [System.IO.File]::WriteAllText(
+            "cosign.key",
+            $env:COSIGN_PRIVATE_KEY,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          $publicKey = & cosign public-key --key cosign.key
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($publicKey)) {
+            throw "Failed to generate cosign public key."
+          }
+
+          [System.IO.File]::WriteAllText(
+            "dist/stegoforge-cosign.pub",
+            $publicKey,
+            [System.Text.UTF8Encoding]::new($false)
+          )
           cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.zip.sig" "dist/$artifactBase.zip"
           cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.sha256.sig" "dist/$artifactBase.sha256"
 
