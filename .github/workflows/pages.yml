@@ -32,7 +32,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: '20'
 
       - name: Install dependencies
         working-directory: website
@@ -40,7 +40,12 @@ jobs:
 
       - name: Build website
         working-directory: website
-        run: npm run build
+        run: npm run build -- --outDir dist
+
+      - name: Verify website build output
+        run: |
+          test -d website/dist
+          test -n "$(find website/dist -mindepth 1 -print -quit)"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
