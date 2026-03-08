@@ -143,9 +143,23 @@ jobs:
             }
 
   package-cli:
-    name: Package CLI
-    runs-on: ubuntu-latest
+    name: Package CLI (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
     needs: [validate-release-metadata, verify-ci-status-checks]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+            rid: linux-x64
+            output_dir: artifacts/cli-linux
+            archive_ext: tar.gz
+          - os: windows-latest
+            platform: windows-x64
+            rid: win-x64
+            output_dir: artifacts/cli-win
+            archive_ext: zip
 
     steps:
       - name: Checkout
@@ -161,24 +175,40 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Publish CLI
-        run: dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --output artifacts/cli
+        run: dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --runtime ${{ matrix.rid }} --self-contained false --output ${{ matrix.output_dir }}
 
-      - name: Package and checksum CLI artifact
+      - name: Package and checksum CLI artifact (Linux)
+        if: matrix.platform == 'linux-x64'
         env:
           TAG: ${{ needs.validate-release-metadata.outputs.tag }}
         run: |
           set -euo pipefail
           mkdir -p dist
-          artifact_base="stegoforge-cli-${TAG}-linux-x64"
-          artifact_name="${artifact_base}.tar.gz"
+          artifact_base="stegoforge-cli-${TAG}-${{ matrix.platform }}"
+          artifact_name="${artifact_base}.${{ matrix.archive_ext }}"
 
-          tar -C artifacts/cli -czf "dist/${artifact_name}" .
+          tar -C ${{ matrix.output_dir }} -czf "dist/${artifact_name}" .
           (
             cd dist
             sha256sum "${artifact_name}" > "${artifact_base}.sha256"
           )
 
-      - name: Sign CLI artifact and checksum
+      - name: Package and checksum CLI artifact (Windows)
+        if: matrix.platform == 'windows-x64'
+        shell: pwsh
+        env:
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          $artifactBase = "stegoforge-cli-$env:TAG-${{ matrix.platform }}"
+          $artifactName = "$artifactBase.${{ matrix.archive_ext }}"
+          Compress-Archive -Path "${{ matrix.output_dir }}/*" -DestinationPath "dist/$artifactName" -CompressionLevel Optimal -Force
+
+          $hash = (Get-FileHash -Path "dist/$artifactName" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash *$artifactName" | Set-Content -Path "dist/$artifactBase.sha256" -NoNewline
+
+      - name: Sign CLI artifact and checksum (Linux)
+        if: matrix.platform == 'linux-x64'
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
@@ -190,34 +220,90 @@ jobs:
             exit 1
           fi
 
-          artifact_base="stegoforge-cli-${TAG}-linux-x64"
+          artifact_base="stegoforge-cli-${TAG}-${{ matrix.platform }}"
           printf '%s' "$COSIGN_PRIVATE_KEY" > cosign.key
           cosign public-key --key cosign.key > dist/stegoforge-cosign.pub
-          cosign sign-blob --yes --key cosign.key --output-signature "dist/${artifact_base}.tar.gz.sig" "dist/${artifact_base}.tar.gz"
+          cosign sign-blob --yes --key cosign.key --output-signature "dist/${artifact_base}.${{ matrix.archive_ext }}.sig" "dist/${artifact_base}.${{ matrix.archive_ext }}"
           cosign sign-blob --yes --key cosign.key --output-signature "dist/${artifact_base}.sha256.sig" "dist/${artifact_base}.sha256"
 
-      - name: Validate CLI checksum/signatures
+      - name: Sign CLI artifact and checksum (Windows)
+        if: matrix.platform == 'windows-x64'
+        shell: pwsh
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:COSIGN_PRIVATE_KEY)) {
+            throw "COSIGN_PRIVATE_KEY secret must be configured for release signing."
+          }
+
+          $artifactBase = "stegoforge-cli-$env:TAG-${{ matrix.platform }}"
+          [System.IO.File]::WriteAllText(
+            "cosign.key",
+            $env:COSIGN_PRIVATE_KEY,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          $publicKey = ((& cosign public-key --key cosign.key) -join "`n").Trim()
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($publicKey)) {
+            throw "Failed to generate cosign public key."
+          }
+
+          [System.IO.File]::WriteAllText(
+            "dist/stegoforge-cosign.pub",
+            $publicKey,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.${{ matrix.archive_ext }}.sig" "dist/$artifactBase.${{ matrix.archive_ext }}"
+          cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.sha256.sig" "dist/$artifactBase.sha256"
+
+      - name: Validate CLI checksum/signatures (Linux)
+        if: matrix.platform == 'linux-x64'
         env:
           TAG: ${{ needs.validate-release-metadata.outputs.tag }}
         run: |
           set -euo pipefail
-          artifact_base="stegoforge-cli-${TAG}-linux-x64"
+          artifact_base="stegoforge-cli-${TAG}-${{ matrix.platform }}"
           (
             cd dist
             sha256sum --check "${artifact_base}.sha256"
           )
-          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/${artifact_base}.tar.gz.sig" "dist/${artifact_base}.tar.gz"
+          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/${artifact_base}.${{ matrix.archive_ext }}.sig" "dist/${artifact_base}.${{ matrix.archive_ext }}"
           cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/${artifact_base}.sha256.sig" "dist/${artifact_base}.sha256"
+
+      - name: Validate CLI checksum/signatures (Windows)
+        if: matrix.platform == 'windows-x64'
+        shell: pwsh
+        env:
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          $artifactBase = "stegoforge-cli-$env:TAG-${{ matrix.platform }}"
+          $line = Get-Content -Path "dist/$artifactBase.sha256" -Raw
+          $parts = $line.Split('*', 2)
+          if ($parts.Count -ne 2) {
+            throw "Invalid checksum manifest format in dist/$artifactBase.sha256"
+          }
+
+          $expected = $parts[0].Trim().ToLowerInvariant()
+          $actual = (Get-FileHash -Path "dist/$($parts[1].Trim())" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($expected -ne $actual) {
+            throw "Checksum mismatch for $artifactBase.${{ matrix.archive_ext }}"
+          }
+
+          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/$artifactBase.${{ matrix.archive_ext }}.sig" "dist/$artifactBase.${{ matrix.archive_ext }}"
+          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/$artifactBase.sha256.sig" "dist/$artifactBase.sha256"
 
       - name: Upload CLI release assets
         uses: actions/upload-artifact@v4
         with:
-          name: release-assets-cli-${{ needs.validate-release-metadata.outputs.tag }}
+          name: release-assets-cli-${{ needs.validate-release-metadata.outputs.tag }}-${{ matrix.platform }}
           path: |
-            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz
-            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256
-            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz.sig
-            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256.sig
+            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-${{ matrix.platform }}.${{ matrix.archive_ext }}
+            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-${{ matrix.platform }}.sha256
+            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-${{ matrix.platform }}.${{ matrix.archive_ext }}.sig
+            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-${{ matrix.platform }}.sha256.sig
             dist/stegoforge-cosign.pub
 
   package-wpf:
@@ -347,11 +433,17 @@ jobs:
       contents: write
 
     steps:
-      - name: Download CLI release assets
+      - name: Download CLI Linux release assets
         uses: actions/download-artifact@v4
         with:
-          name: release-assets-cli-${{ needs.validate-release-metadata.outputs.tag }}
-          path: release-assets
+          name: release-assets-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64
+          path: release-assets/linux
+
+      - name: Download CLI Windows release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets-cli-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64
+          path: release-assets/windows
 
       - name: Download WPF release assets
         uses: actions/download-artifact@v4
@@ -367,12 +459,16 @@ jobs:
           body: ${{ inputs.changelog_summary }}
           generate_release_notes: true
           files: |
-            release-assets/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz
-            release-assets/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256
-            release-assets/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz.sig
-            release-assets/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256.sig
+            release-assets/linux/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz
+            release-assets/linux/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256
+            release-assets/linux/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz.sig
+            release-assets/linux/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256.sig
+            release-assets/windows/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.zip
+            release-assets/windows/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.sha256
+            release-assets/windows/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.zip.sig
+            release-assets/windows/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.sha256.sig
             release-assets/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.zip
             release-assets/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.sha256
             release-assets/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.zip.sig
             release-assets/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.sha256.sig
-            release-assets/stegoforge-cosign.pub
+            release-assets/linux/stegoforge-cosign.pub

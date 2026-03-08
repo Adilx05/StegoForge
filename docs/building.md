@@ -150,7 +150,8 @@ These commands verify deterministic capacity boundaries, WAV embed/extract round
 | `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build` | `.github/workflows/ci.yml` → `wpf` → `Test WPF smoke project` |
 | `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --filter "FullyQualifiedName~WpfCommandFlowTests"` | `.github/workflows/ci.yml` → `wpf` → `Test WPF command-flow subset` |
 | `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build --filter "Category=Hardening"` | `.github/workflows/ci.yml` → `wpf` → `Test WPF hardening subset (Windows)` |
-| `dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --output artifacts/cli` | `.github/workflows/release.yml` → `package-cli` → `Publish CLI` |
+| `dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --runtime linux-x64 --self-contained false --output artifacts/cli-linux` | `.github/workflows/release.yml` → `package-cli` (`linux-x64`) → `Publish CLI` |
+| `dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --runtime win-x64 --self-contained false --output artifacts/cli-win` | `.github/workflows/release.yml` → `package-cli` (`windows-x64`) → `Publish CLI` |
 | `dotnet publish src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --output artifacts/wpf` | `.github/workflows/release.yml` → `package-wpf` → `Publish WPF` |
 
 ## CI workflow behavior (`.github/workflows/ci.yml`)
@@ -175,11 +176,15 @@ These commands verify deterministic capacity boundaries, WAV embed/extract round
 ## Release workflow behavior (`.github/workflows/release.yml`)
 
 - Trigger: manual `workflow_dispatch` with validated `tag`, `version`, and `changelog_summary` metadata.
-- `package-cli` (Ubuntu) publishes CLI output and emits deterministic release files:
+- `package-cli` (matrix: Ubuntu + Windows) publishes CLI output with RID-specific outputs (`linux-x64`, `win-x64`) and emits deterministic release files:
   - `stegoforge-cli-<tag>-linux-x64.tar.gz`
   - `stegoforge-cli-<tag>-linux-x64.sha256`
   - `stegoforge-cli-<tag>-linux-x64.tar.gz.sig`
   - `stegoforge-cli-<tag>-linux-x64.sha256.sig`
+  - `stegoforge-cli-<tag>-windows-x64.zip`
+  - `stegoforge-cli-<tag>-windows-x64.sha256`
+  - `stegoforge-cli-<tag>-windows-x64.zip.sig`
+  - `stegoforge-cli-<tag>-windows-x64.sha256.sig`
 - `package-wpf` (Windows) publishes WPF output and emits deterministic release files:
   - `stegoforge-wpf-<tag>-windows-x64.zip`
   - `stegoforge-wpf-<tag>-windows-x64.sha256`
@@ -253,6 +258,10 @@ git push origin vX.Y.Z
   - `stegoforge-cli-vX.Y.Z-linux-x64.sha256`
   - `stegoforge-cli-vX.Y.Z-linux-x64.tar.gz.sig`
   - `stegoforge-cli-vX.Y.Z-linux-x64.sha256.sig`
+  - `stegoforge-cli-vX.Y.Z-windows-x64.zip`
+  - `stegoforge-cli-vX.Y.Z-windows-x64.sha256`
+  - `stegoforge-cli-vX.Y.Z-windows-x64.zip.sig`
+  - `stegoforge-cli-vX.Y.Z-windows-x64.sha256.sig`
   - `stegoforge-wpf-vX.Y.Z-windows-x64.zip`
   - `stegoforge-wpf-vX.Y.Z-windows-x64.sha256`
   - `stegoforge-wpf-vX.Y.Z-windows-x64.zip.sig`
@@ -272,11 +281,17 @@ sha256sum --check stegoforge-cli-vX.Y.Z-linux-x64.sha256
 ```
 
 ```powershell
+$line = Get-Content .\stegoforge-cli-vX.Y.Z-windows-x64.sha256 -Raw
+$parts = $line.Split('*', 2)
+$expected = $parts[0].Trim().ToLowerInvariant()
+$actual = (Get-FileHash -Path $parts[1].Trim() -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($expected -ne $actual) { throw "CLI checksum verification failed." }
+
 $line = Get-Content .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256 -Raw
 $parts = $line.Split('*', 2)
 $expected = $parts[0].Trim().ToLowerInvariant()
 $actual = (Get-FileHash -Path $parts[1].Trim() -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($expected -ne $actual) { throw "Checksum verification failed." }
+if ($expected -ne $actual) { throw "WPF checksum verification failed." }
 ```
 
 Signature verification:
@@ -284,9 +299,13 @@ Signature verification:
 ```bash
 cosign verify-blob --key stegoforge-cosign.pub --signature stegoforge-cli-vX.Y.Z-linux-x64.tar.gz.sig stegoforge-cli-vX.Y.Z-linux-x64.tar.gz
 cosign verify-blob --key stegoforge-cosign.pub --signature stegoforge-cli-vX.Y.Z-linux-x64.sha256.sig stegoforge-cli-vX.Y.Z-linux-x64.sha256
+cosign verify-blob --key stegoforge-cosign.pub --signature stegoforge-cli-vX.Y.Z-windows-x64.zip.sig stegoforge-cli-vX.Y.Z-windows-x64.zip
+cosign verify-blob --key stegoforge-cosign.pub --signature stegoforge-cli-vX.Y.Z-windows-x64.sha256.sig stegoforge-cli-vX.Y.Z-windows-x64.sha256
 ```
 
 ```powershell
+cosign verify-blob --key .\stegoforge-cosign.pub --signature .\stegoforge-cli-vX.Y.Z-windows-x64.zip.sig .\stegoforge-cli-vX.Y.Z-windows-x64.zip
+cosign verify-blob --key .\stegoforge-cosign.pub --signature .\stegoforge-cli-vX.Y.Z-windows-x64.sha256.sig .\stegoforge-cli-vX.Y.Z-windows-x64.sha256
 cosign verify-blob --key .\stegoforge-cosign.pub --signature .\stegoforge-wpf-vX.Y.Z-windows-x64.zip.sig .\stegoforge-wpf-vX.Y.Z-windows-x64.zip
 cosign verify-blob --key .\stegoforge-cosign.pub --signature .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256.sig .\stegoforge-wpf-vX.Y.Z-windows-x64.sha256
 ```
