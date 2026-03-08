@@ -54,7 +54,8 @@ StegoForge now uses **MinVer** as the single source of semantic version resoluti
 - `Version` is set from `$(MinVerVersion)` for package/display consistency.
 - `AssemblyVersion` is intentionally stabilized as `Major.Minor.0.0` to reduce assembly binding churn.
 - `FileVersion` is numeric and maps to `Major.Minor.Patch.0` for Windows file metadata.
-- `InformationalVersion` is set to `$(MinVerVersion)` for runtime display surfaces.
+- `InformationalVersion` is set to the resolved semantic `Version` for runtime display surfaces.
+- `AssemblyVersion`/`FileVersion` are derived by parsing `Version` (`X.Y.Z`) to keep WPF/WindowsDesktop builds stable even when MinVer component properties are unavailable in early evaluation.
 
 When building locally **without a matching release tag**, MinVer emits a sensible prerelease/dev version (using default prerelease identifiers `alpha.0`) so contributors can build and test without manual version edits.
 

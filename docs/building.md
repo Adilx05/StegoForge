@@ -322,9 +322,9 @@ The repository uses MinVer via `Directory.Build.props` for all projects (CLI, WP
 - Default local prerelease identifiers: `alpha.0`
 - Shared metadata mapping:
   - `Version = $(MinVerVersion)`
-  - `AssemblyVersion = $(MinVerMajor).$(MinVerMinor).0.0`
-  - `FileVersion = $(MinVerMajor).$(MinVerMinor).$(MinVerPatch).0`
-  - `InformationalVersion = $(MinVerVersion)`
+  - `AssemblyVersion = Major.Minor.0.0` (derived from parsed `Version`)
+  - `FileVersion = Major.Minor.Patch.0` (derived from parsed `Version`)
+  - `InformationalVersion = $(Version)`
 
 A shared MSBuild target (`Directory.Build.targets`) prints resolved values during build so version resolution is visible in local and CI logs.
 
@@ -335,3 +335,6 @@ dotnet build src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release
 ```
 
 Look for a log line beginning with `StegoForge version metadata:`.
+
+
+Note: numeric `AssemblyVersion` and `FileVersion` are parsed from `$(Version)` rather than directly from `$(MinVerMajor)`/`$(MinVerMinor)`/`$(MinVerPatch)` so WPF WindowsDesktop markup compilation gets valid values consistently.
