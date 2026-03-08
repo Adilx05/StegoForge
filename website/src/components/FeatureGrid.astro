@@ -13,38 +13,9 @@ const { items } = Astro.props;
 
 <ul class="grid">
   {items.map((item) => (
-    <li>
+    <li class="card">
       <h3>{item.title}</h3>
       <p>{item.description}</p>
     </li>
   ))}
 </ul>
-
-<style>
-  .grid {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.9rem;
-  }
-
-  li {
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    background: rgba(15, 23, 42, 0.5);
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 1rem;
-  }
-
-  p {
-    margin: 0.5rem 0 0;
-    color: #cbd5e1;
-    font-size: 0.95rem;
-  }
-</style>
