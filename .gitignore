@@ -410,5 +410,5 @@ FodyWeavers.xsd
 
 ### VisualStudio Patch ###
 # Additional files built by Visual Studio
-
+cosign.key
 # End of https://www.toptal.com/developers/gitignore/api/dotnetcore,visualstudio
