@@ -1,12 +1,26 @@
+---
+interface Cta {
+  label: string;
+  href: string;
+}
+
+interface Props {
+  eyebrow: string;
+  headline: string;
+  subheadline: string;
+  primaryCta: Cta;
+  secondaryCta: Cta;
+}
+
+const { eyebrow, headline, subheadline, primaryCta, secondaryCta } = Astro.props;
+---
+
 <section id="hero" class="hero">
-  <p class="eyebrow">StegoForge</p>
-  <h1>Modular steganography for .NET workflows.</h1>
-  <p class="lead">
-    Embed, extract, inspect, and capacity-check payloads with production PNG/BMP/WAV handlers,
-    a scriptable CLI, and a WPF desktop client.
-  </p>
+  <p class="eyebrow">{eyebrow}</p>
+  <h1>{headline}</h1>
+  <p class="lead">{subheadline}</p>
   <div class="actions">
-    <a href="https://github.com/StegoForge/StegoForge" class="cta primary">View on GitHub</a>
-    <a href="https://github.com/StegoForge/StegoForge/releases" class="cta secondary">Browse releases</a>
+    <a href={primaryCta.href} class="cta primary">{primaryCta.label}</a>
+    <a href={secondaryCta.href} class="cta secondary">{secondaryCta.label}</a>
   </div>
 </section>
