@@ -294,7 +294,7 @@ jobs:
             [System.Text.UTF8Encoding]::new($false)
           )
 
-          $publicKey = & cosign public-key --key cosign.key
+          $publicKey = ((& cosign public-key --key cosign.key) -join "`n").Trim()
           if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($publicKey)) {
             throw "Failed to generate cosign public key."
           }
