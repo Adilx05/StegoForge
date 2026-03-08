@@ -15,6 +15,12 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
     private static readonly PngLsbCapacityCalculator CapacityCalculator = new();
     private static readonly CarrierFormatDetails Details = new("png-lsb-v1", "PNG LSB (v1)", "1.0.0");
     private static readonly string[] SupportedColorTypes = [nameof(PngColorType.Rgb), nameof(PngColorType.RgbWithAlpha)];
+    private readonly ProcessingLimits _limits;
+
+    public PngLsbFormatHandler(ProcessingLimits? limits = null)
+    {
+        _limits = limits ?? ProcessingLimits.SafeDefaults;
+    }
 
     public string Format => Details.FormatId;
 
@@ -44,6 +50,11 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         if (payload is null || payload.Length == 0)
         {
             throw new InvalidArgumentsException("Payload must contain at least one byte.");
+        }
+
+        if (payload.Length > _limits.MaxEnvelopeBytes)
+        {
+            throw new InvalidArgumentsException($"Payload envelope exceeds configured limit of {_limits.MaxEnvelopeBytes} bytes.");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -100,6 +111,11 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
             if (payloadLength > maxPayloadBytes)
             {
                 throw new CorruptedDataException("Embedded payload length exceeds carrier capacity.");
+            }
+
+            if (payloadLength > _limits.MaxEnvelopeBytes)
+            {
+                throw new CorruptedDataException($"Embedded payload length exceeds configured limit of {_limits.MaxEnvelopeBytes} bytes.");
             }
 
             return ReadBytes(bitReader, payloadLength);
@@ -292,8 +308,9 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         return buffer;
     }
 
-    private static async Task<MemoryStream> CreateSeekableCopyAsync(Stream source, CancellationToken cancellationToken)
+    private async Task<MemoryStream> CreateSeekableCopyAsync(Stream source, CancellationToken cancellationToken)
     {
+        EnsureCarrierSizeWithinLimit(source);
         if (source.CanSeek)
         {
             source.Position = 0;
@@ -303,6 +320,19 @@ public sealed class PngLsbFormatHandler : ICarrierFormatHandler
         await source.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
         buffer.Position = 0;
         return buffer;
+    }
+
+    private void EnsureCarrierSizeWithinLimit(Stream source)
+    {
+        if (!source.CanSeek || _limits.MaxCarrierSizeBytes is null)
+        {
+            return;
+        }
+
+        if (source.Length > _limits.MaxCarrierSizeBytes.Value)
+        {
+            throw new InvalidArgumentsException($"Carrier size exceeds configured limit of {_limits.MaxCarrierSizeBytes.Value} bytes.");
+        }
     }
 
     private readonly record struct PngCarrierInfo(int Width, int Height, PngColorType ColorType);

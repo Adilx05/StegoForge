@@ -1,4 +1,5 @@
 using System.Windows;
+using StegoForge.Application.Diagnostics;
 
 namespace StegoForge.Wpf.Services;
 
@@ -6,7 +7,8 @@ public sealed class DialogNotificationService : INotificationService
 {
     public void ShowError(string title, string message)
     {
-        MessageBox.Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+        var safeMessage = SecurityLoggingPolicy.SanitizeMessage(message);
+        MessageBox.Show(safeMessage, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     public bool Confirm(string title, string message)

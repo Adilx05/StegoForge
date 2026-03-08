@@ -9,13 +9,21 @@ public sealed class PayloadOrchestrationService(ICompressionProvider compression
 {
     private const string NoCompressionDescriptor = "none";
     private const string NoEncryptionDescriptor = "none";
+    private readonly ProcessingLimits _limits = ProcessingLimits.SafeDefaults;
+
+    public PayloadOrchestrationService(ICompressionProvider compressionProvider, ICryptoProvider cryptoProvider, ProcessingLimits? limits = null)
+        : this(compressionProvider, cryptoProvider)
+    {
+        _limits = limits ?? ProcessingLimits.SafeDefaults;
+    }
 
     public PayloadEnvelope CreateEnvelopeForEmbed(
         byte[] payload,
         ProcessingOptions processingOptions,
         PasswordOptions passwordOptions,
         string? passphrase,
-        string? originalFileName = null)
+        string? originalFileName = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(payload);
         ArgumentNullException.ThrowIfNull(processingOptions);
@@ -26,12 +34,21 @@ public sealed class PayloadOrchestrationService(ICompressionProvider compression
             throw new ArgumentException("Payload must contain at least one byte.", nameof(payload));
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsurePayloadWithinLimit(payload.LongLength, "Payload");
+
         var (compressedPayload, wasCompressed, compressionDescriptor) = ApplyCompressionPolicy(payload, processingOptions);
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsurePayloadWithinLimit(compressedPayload.LongLength, "Compressed payload");
+
         var (finalPayload, wasEncrypted, encryptionDescriptor, saltMetadata, nonceMetadata, integrityData) = ApplyEncryptionForEmbed(
             compressedPayload,
             processingOptions,
             passwordOptions,
             passphrase);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        EnsurePayloadWithinLimit(finalPayload.LongLength, "Encrypted payload");
 
         var flags = EnvelopeFlags.None;
         if (wasCompressed)
@@ -61,17 +78,35 @@ public sealed class PayloadOrchestrationService(ICompressionProvider compression
         return new PayloadEnvelope(EnvelopeVersion.V1, flags, header, finalPayload, integrityData);
     }
 
-    public byte[] ExtractPayload(PayloadEnvelope envelope, ProcessingOptions processingOptions, PasswordOptions passwordOptions, string? passphrase)
+    public byte[] ExtractPayload(PayloadEnvelope envelope, ProcessingOptions processingOptions, PasswordOptions passwordOptions, string? passphrase, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(envelope);
         ArgumentNullException.ThrowIfNull(processingOptions);
         ArgumentNullException.ThrowIfNull(passwordOptions);
 
-        var decrypted = ApplyDecryptionForExtract(envelope, passwordOptions, passphrase);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        return envelope.Flags.HasFlag(EnvelopeFlags.Compressed)
-            ? compressionProvider.Decompress(new DecompressionRequest(decrypted, "extract:payload")).Data
-            : decrypted;
+        var decrypted = ApplyDecryptionForExtract(envelope, passwordOptions, passphrase);
+        EnsurePayloadWithinLimit(decrypted.LongLength, "Decrypted payload");
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!envelope.Flags.HasFlag(EnvelopeFlags.Compressed))
+        {
+            return decrypted;
+        }
+
+        var decompressed = compressionProvider.Decompress(new DecompressionRequest(decrypted, "extract:payload")).Data;
+        EnsurePayloadWithinLimit(decompressed.LongLength, "Decompressed payload");
+        cancellationToken.ThrowIfCancellationRequested();
+        return decompressed;
+    }
+
+    private void EnsurePayloadWithinLimit(long payloadLength, string field)
+    {
+        if (payloadLength > _limits.MaxPayloadBytes)
+        {
+            throw new InvalidArgumentsException($"{field} exceeds configured limit of {_limits.MaxPayloadBytes} bytes.");
+        }
     }
 
     private (byte[] Payload, bool WasEncrypted, string Descriptor, string? SaltMetadata, string? NonceMetadata, byte[] IntegrityData) ApplyEncryptionForEmbed(

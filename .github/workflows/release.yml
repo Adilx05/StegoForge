@@ -1,14 +1,151 @@
 name: Release Artifacts
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag in format vX.Y.Z'
+        required: true
+        type: string
+      version:
+        description: 'Release version in format X.Y.Z'
+        required: true
+        type: string
+      changelog_summary:
+        description: 'Short summary aligned with CHANGELOG entry'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  checks: read
 
 jobs:
+  validate-release-metadata:
+    name: Validate Release Metadata
+    runs-on: ubuntu-latest
+
+    outputs:
+      tag: ${{ steps.capture.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate tag/version/changelog metadata
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_CHANGELOG_SUMMARY: ${{ inputs.changelog_summary }}
+        run: |
+          set -euo pipefail
+
+          tag="$INPUT_TAG"
+          version="$INPUT_VERSION"
+          summary="$INPUT_CHANGELOG_SUMMARY"
+
+          if [[ -z "$tag" || -z "$version" || -z "$summary" ]]; then
+            echo "tag, version, and changelog_summary are required."
+            exit 1
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag must match vX.Y.Z (received: $tag)."
+            exit 1
+          fi
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must match X.Y.Z (received: $version)."
+            exit 1
+          fi
+
+          expected_tag="v$version"
+          if [[ "$tag" != "$expected_tag" ]]; then
+            echo "Tag/version mismatch: expected $expected_tag from version $version, received $tag."
+            exit 1
+          fi
+
+          if ! rg -n "^## \[$version\]" CHANGELOG.md > /dev/null; then
+            echo "CHANGELOG.md is missing heading for version $version."
+            exit 1
+          fi
+
+      - name: Capture outputs
+        id: capture
+        run: echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+
+  verify-ci-status-checks:
+    name: Verify Required CI Status Checks
+    runs-on: ubuntu-latest
+    needs: validate-release-metadata
+
+    steps:
+      - name: Validate required CI checks succeeded for target commit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const requestedTag = '${{ inputs.tag }}';
+
+            let sha = context.sha;
+
+            if (requestedTag) {
+              const tagRef = await github.rest.git.getRef({ owner, repo, ref: `tags/${requestedTag}` });
+              let objectSha = tagRef.data.object.sha;
+              if (tagRef.data.object.type === 'tag') {
+                const tagObject = await github.rest.git.getTag({ owner, repo, tag_sha: objectSha });
+                objectSha = tagObject.data.object.sha;
+              }
+              sha = objectSha;
+            }
+
+            const response = await github.rest.checks.listForRef({
+              owner,
+              repo,
+              ref: sha,
+              per_page: 100
+            });
+
+            const requiredCheckRuns = [
+              'Core/CLI (ubuntu-latest)',
+              'Core/CLI (windows-latest)',
+              'WPF (windows-latest)'
+            ];
+
+            const checksByName = new Map(response.data.check_runs.map(run => [run.name, run]));
+            const failures = [];
+
+            for (const checkName of requiredCheckRuns) {
+              const check = checksByName.get(checkName);
+              if (!check) {
+                failures.push(`Missing required status check: ${checkName}`);
+                continue;
+              }
+
+              if (check.status !== 'completed') {
+                failures.push(`Status check not completed: ${checkName} (status=${check.status})`);
+                continue;
+              }
+
+              if (check.conclusion !== 'success') {
+                failures.push(`Status check not successful: ${checkName} (conclusion=${check.conclusion})`);
+              }
+            }
+
+            if (failures.length > 0) {
+              core.setFailed([
+                `Required CI status checks are not all successful for commit ${sha}.`,
+                ...failures
+              ].join('\n'));
+            } else {
+              core.info(`Required CI status checks succeeded for commit ${sha}.`);
+            }
+
   package-cli:
     name: Package CLI
     runs-on: ubuntu-latest
+    needs: [validate-release-metadata, verify-ci-status-checks]
 
     steps:
       - name: Checkout
@@ -19,19 +156,74 @@ jobs:
         with:
           dotnet-version: 10.0.x
           include-prerelease: true
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
 
       - name: Publish CLI
         run: dotnet publish src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release --output artifacts/cli
 
-      - name: Upload CLI artifact
+      - name: Package and checksum CLI artifact
+        env:
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          artifact_base="stegoforge-cli-${TAG}-linux-x64"
+          artifact_name="${artifact_base}.tar.gz"
+
+          tar -C artifacts/cli -czf "dist/${artifact_name}" .
+          (
+            cd dist
+            sha256sum "${artifact_name}" > "${artifact_base}.sha256"
+          )
+
+      - name: Sign CLI artifact and checksum
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${COSIGN_PRIVATE_KEY:-}" ]]; then
+            echo "COSIGN_PRIVATE_KEY secret must be configured for release signing."
+            exit 1
+          fi
+
+          artifact_base="stegoforge-cli-${TAG}-linux-x64"
+          printf '%s' "$COSIGN_PRIVATE_KEY" > cosign.key
+          cosign public-key --key cosign.key > dist/stegoforge-cosign.pub
+          cosign sign-blob --yes --key cosign.key --output-signature "dist/${artifact_base}.tar.gz.sig" "dist/${artifact_base}.tar.gz"
+          cosign sign-blob --yes --key cosign.key --output-signature "dist/${artifact_base}.sha256.sig" "dist/${artifact_base}.sha256"
+
+      - name: Validate CLI checksum/signatures
+        env:
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          set -euo pipefail
+          artifact_base="stegoforge-cli-${TAG}-linux-x64"
+          (
+            cd dist
+            sha256sum --check "${artifact_base}.sha256"
+          )
+          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/${artifact_base}.tar.gz.sig" "dist/${artifact_base}.tar.gz"
+          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/${artifact_base}.sha256.sig" "dist/${artifact_base}.sha256"
+
+      - name: Upload CLI release assets
         uses: actions/upload-artifact@v4
         with:
-          name: stegoforge-cli-${{ github.ref_name }}
-          path: artifacts/cli
+          name: release-assets-cli-${{ needs.validate-release-metadata.outputs.tag }}
+          path: |
+            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz
+            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256
+            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz.sig
+            dist/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256.sig
+            dist/stegoforge-cosign.pub
 
   package-wpf:
     name: Package WPF
     runs-on: windows-latest
+    needs: [validate-release-metadata, verify-ci-status-checks]
 
     steps:
       - name: Checkout
@@ -43,11 +235,130 @@ jobs:
           dotnet-version: 10.0.x
           include-prerelease: true
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
       - name: Publish WPF
         run: dotnet publish src/StegoForge.Wpf/StegoForge.Wpf.csproj --configuration Release --output artifacts/wpf
 
-      - name: Upload WPF artifact
+      - name: Optional Authenticode signing for WPF executable
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+          WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_BASE64) -or [string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_PASSWORD)) {
+            Write-Host "Windows Authenticode signing secrets are not configured; skipping optional code-signing."
+            exit 0
+          }
+
+          $pfxPath = Join-Path $env:RUNNER_TEMP "stegoforge-signing.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
+
+          $exe = Get-ChildItem -Path artifacts/wpf -Filter "StegoForge.Wpf.exe" -Recurse | Select-Object -First 1
+          if (-not $exe) {
+            throw "Expected StegoForge.Wpf.exe in publish output for Authenticode signing."
+          }
+
+          & signtool sign /fd SHA256 /td SHA256 /f $pfxPath /p $env:WINDOWS_SIGNING_CERT_PASSWORD $exe.FullName
+          & signtool verify /pa $exe.FullName
+
+      - name: Package and checksum WPF artifact
+        shell: pwsh
+        env:
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          $artifactBase = "stegoforge-wpf-$env:TAG-windows-x64"
+          $artifactName = "$artifactBase.zip"
+          Compress-Archive -Path artifacts/wpf/* -DestinationPath "dist/$artifactName" -CompressionLevel Optimal -Force
+
+          $hash = (Get-FileHash -Path "dist/$artifactName" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash *$artifactName" | Set-Content -Path "dist/$artifactBase.sha256" -NoNewline
+
+      - name: Sign WPF artifact and checksum
+        shell: pwsh
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:COSIGN_PRIVATE_KEY)) {
+            throw "COSIGN_PRIVATE_KEY secret must be configured for release signing."
+          }
+
+          $artifactBase = "stegoforge-wpf-$env:TAG-windows-x64"
+          Set-Content -Path cosign.key -Value $env:COSIGN_PRIVATE_KEY -NoNewline
+          cosign public-key --key cosign.key | Set-Content -Path dist/stegoforge-cosign.pub -NoNewline
+          cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.zip.sig" "dist/$artifactBase.zip"
+          cosign sign-blob --yes --key cosign.key --output-signature "dist/$artifactBase.sha256.sig" "dist/$artifactBase.sha256"
+
+      - name: Validate WPF checksum/signatures
+        shell: pwsh
+        env:
+          TAG: ${{ needs.validate-release-metadata.outputs.tag }}
+        run: |
+          $artifactBase = "stegoforge-wpf-$env:TAG-windows-x64"
+          $line = Get-Content -Path "dist/$artifactBase.sha256" -Raw
+          $parts = $line.Split('*', 2)
+          if ($parts.Count -ne 2) {
+            throw "Invalid checksum manifest format in dist/$artifactBase.sha256"
+          }
+
+          $expected = $parts[0].Trim().ToLowerInvariant()
+          $actual = (Get-FileHash -Path "dist/$($parts[1].Trim())" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($expected -ne $actual) {
+            throw "Checksum mismatch for $artifactBase.zip"
+          }
+
+          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/$artifactBase.zip.sig" "dist/$artifactBase.zip"
+          cosign verify-blob --key dist/stegoforge-cosign.pub --signature "dist/$artifactBase.sha256.sig" "dist/$artifactBase.sha256"
+
+      - name: Upload WPF release assets
         uses: actions/upload-artifact@v4
         with:
-          name: stegoforge-wpf-${{ github.ref_name }}
-          path: artifacts/wpf
+          name: release-assets-wpf-${{ needs.validate-release-metadata.outputs.tag }}
+          path: |
+            dist/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.zip
+            dist/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.sha256
+            dist/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.zip.sig
+            dist/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.sha256.sig
+            dist/stegoforge-cosign.pub
+
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate-release-metadata, package-cli, package-wpf]
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download CLI release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets-cli-${{ needs.validate-release-metadata.outputs.tag }}
+          path: release-assets
+
+      - name: Download WPF release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets-wpf-${{ needs.validate-release-metadata.outputs.tag }}
+          path: release-assets
+
+      - name: Publish release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate-release-metadata.outputs.tag }}
+          name: StegoForge ${{ needs.validate-release-metadata.outputs.tag }}
+          body: ${{ inputs.changelog_summary }}
+          generate_release_notes: true
+          files: |
+            release-assets/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz
+            release-assets/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256
+            release-assets/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.tar.gz.sig
+            release-assets/stegoforge-cli-${{ needs.validate-release-metadata.outputs.tag }}-linux-x64.sha256.sig
+            release-assets/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.zip
+            release-assets/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.sha256
+            release-assets/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.zip.sig
+            release-assets/stegoforge-wpf-${{ needs.validate-release-metadata.outputs.tag }}-windows-x64.sha256.sig
+            release-assets/stegoforge-cosign.pub

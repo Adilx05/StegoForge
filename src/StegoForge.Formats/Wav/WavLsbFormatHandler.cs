@@ -9,6 +9,12 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
 {
     private static readonly WavLsbCapacityCalculator CapacityCalculator = new();
     private static readonly CarrierFormatDetails Details = new("wav-lsb-v1", "WAV LSB (v1)", "1.0.0");
+    private readonly ProcessingLimits _limits;
+
+    public WavLsbFormatHandler(ProcessingLimits? limits = null)
+    {
+        _limits = limits ?? ProcessingLimits.SafeDefaults;
+    }
 
     public string Format => Details.FormatId;
 
@@ -39,6 +45,11 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
         if (payload is null || payload.Length == 0)
         {
             throw new InvalidArgumentsException("Payload must contain at least one byte.");
+        }
+
+        if (payload.Length > _limits.MaxEnvelopeBytes)
+        {
+            throw new InvalidArgumentsException($"Payload envelope exceeds configured limit of {_limits.MaxEnvelopeBytes} bytes.");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -83,6 +94,11 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
             if (payloadLength > maxPayloadBytes)
             {
                 throw new CorruptedDataException("Embedded payload length exceeds carrier capacity.");
+            }
+
+            if (payloadLength > _limits.MaxEnvelopeBytes)
+            {
+                throw new CorruptedDataException($"Embedded payload length exceeds configured limit of {_limits.MaxEnvelopeBytes} bytes.");
             }
 
             return ReadBytes(sampleReader, payloadLength);
@@ -370,13 +386,27 @@ public sealed class WavLsbFormatHandler : ICarrierFormatHandler
         return copy;
     }
 
-    private static async Task<MemoryStream> CreateSeekableCopyAsync(Stream stream, CancellationToken cancellationToken)
+    private async Task<MemoryStream> CreateSeekableCopyAsync(Stream stream, CancellationToken cancellationToken)
     {
+        EnsureCarrierSizeWithinLimit(stream);
         stream.Position = 0;
         var copy = new MemoryStream();
         await stream.CopyToAsync(copy, cancellationToken).ConfigureAwait(false);
         copy.Position = 0;
         return copy;
+    }
+
+    private void EnsureCarrierSizeWithinLimit(Stream source)
+    {
+        if (_limits.MaxCarrierSizeBytes is null)
+        {
+            return;
+        }
+
+        if (source.Length > _limits.MaxCarrierSizeBytes.Value)
+        {
+            throw new InvalidArgumentsException($"Carrier size exceeds configured limit of {_limits.MaxCarrierSizeBytes.Value} bytes.");
+        }
     }
 
     private readonly record struct FmtChunkData(

@@ -1,3 +1,4 @@
+using StegoForge.Application.Diagnostics;
 using StegoForge.Cli;
 using StegoForge.Core.Errors;
 using Xunit;
@@ -14,9 +15,9 @@ public sealed class BaselineCliTests
         var failure = CliErrorContract.CreateFailureFromException(exception);
 
         Assert.Equal(6, failure.ExitCode);
-        Assert.Equal(
-            "ERROR [InvalidPayload] Compressed payload is malformed or does not match the expected compression format. Context: extract:payload.",
-            failure.Message);
+        Assert.StartsWith("ERROR [InvalidPayload]", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("operation=unknown", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("correlationId=", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -28,9 +29,7 @@ public sealed class BaselineCliTests
 
         Assert.NotEqual(0, failure.ExitCode);
         Assert.Equal(1, failure.ExitCode);
-        Assert.Equal(
-            "ERROR [InternalProcessingFailure] Compression provider failed unexpectedly during decompression.",
-            failure.Message);
+        Assert.StartsWith("ERROR [InternalProcessingFailure]", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -38,10 +37,12 @@ public sealed class BaselineCliTests
     {
         var exception = new WrongPasswordException("Unable to authenticate and decrypt payload.");
 
-        var failure = CliErrorContract.CreateFailureFromException(exception);
+        var failure = CliErrorContract.CreateFailureFromException(exception, DiagnosticContext.Create("extract", "png"));
 
         Assert.Equal(8, failure.ExitCode);
-        Assert.Equal("ERROR [WrongPassword] Unable to authenticate and decrypt payload.", failure.Message);
+        Assert.Contains("ERROR [WrongPassword] Unable to authenticate and decrypt payload.", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("operation=extract", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("carrierFormat=png", failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -53,5 +54,18 @@ public sealed class BaselineCliTests
 
         Assert.Equal(8, failure.ExitCode);
         Assert.StartsWith("ERROR [WrongPassword] Unable to authenticate and decrypt payload.", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CreateFailureFromException_RedactsSensitiveTokens()
+    {
+        var exception = new InvalidArgumentsException("password=super-secret plaintextPayloadBytes=[1,2,3] derivedKey=00112233445566778899aabbccddeeff");
+
+        var failure = CliErrorContract.CreateFailureFromException(exception, DiagnosticContext.Create("embed", "png"));
+
+        Assert.DoesNotContain("super-secret", failure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("[1,2,3]", failure.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("00112233445566778899aabbccddeeff", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("<redacted>", failure.Message, StringComparison.Ordinal);
     }
 }

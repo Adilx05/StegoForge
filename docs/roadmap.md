@@ -1,5 +1,6 @@
 # Roadmap
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 This roadmap maps milestones 1–14 with acceptance criteria.
 
 ## Milestone 1 — Solution scaffolding and baseline projects
@@ -48,14 +49,14 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Implementation checklist (tracked):**
 
-- [ ] AEAD provider implementation exists in `src/StegoForge.Crypto/Aead/AesGcmCryptoProvider.cs` and is wired through `ICryptoProvider` resolution in `src/StegoForge.Application/Payload/PayloadOrchestrationService.cs`.
-- [ ] KDF policy/options binding exists in `src/StegoForge.Core/Models/PasswordOptions.cs` and request mapping in `src/StegoForge.Cli/Commands/EmbedCommand.cs` + `src/StegoForge.Cli/Commands/ExtractCommand.cs`.
-- [ ] Envelope crypto metadata (`CipherAlgorithmId`, `KdfAlgorithmId`, salt/nonce/tag fields) is serialized/deserialized in `src/StegoForge.Application/Payload/PayloadEnvelopeSerializer.cs`.
-- [ ] Wrong-password integration tests pass:
+- [x] AEAD provider implementation exists in `src/StegoForge.Crypto/AesGcm/AesGcmCryptoProvider.cs` and is wired through `ICryptoProvider` resolution in `src/StegoForge.Application/Payload/PayloadOrchestrationService.cs`.
+- [x] KDF policy/options binding exists in `src/StegoForge.Core/Models/OperationOptions.cs` and request mapping in `src/StegoForge.Cli/Commands/EmbedCommand.cs` + `src/StegoForge.Cli/Commands/ExtractCommand.cs`.
+- [x] Envelope crypto metadata (`CipherAlgorithmId`, `KdfAlgorithmId`, salt/nonce/tag fields) is serialized/deserialized in `src/StegoForge.Application/Payload/PayloadEnvelopeSerializer.cs`.
+- [x] Wrong-password integration tests pass:
   - `ExtractPayload_EncryptedEnvelope_WithWrongPassword_ThrowsWrongPasswordException`
   - `ExtractPayload_EncryptedEnvelope_WithWrongPassword_MapsToStegoErrorCodeWrongPassword`
   - `CliExtract_WithWrongPassword_ReturnsExitCode8`
-- [ ] Tamper-detection tests pass:
+- [x] Tamper-detection tests pass:
   - `ExtractPayload_EncryptedEnvelope_WithTamperedCiphertext_ThrowsWrongPasswordException`
   - `ExtractPayload_EncryptedEnvelope_WithTamperedAuthTag_ThrowsWrongPasswordException`
   - `ExtractPayload_EncryptedEnvelope_WithTamperedCipherAlgorithmId_ThrowsInvalidHeaderException`
@@ -67,17 +68,17 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Implementation checklist (tracked):**
 
-- [ ] `PngLsbFormatHandler` is the production PNG v1 carrier and remains wired for embed/extract/capacity/info in `src/StegoForge.Formats/Png/PngLsbFormatHandler.cs`.
-- [ ] PNG capacity estimations are validated through integration entry points:
+- [x] `PngLsbFormatHandler` is the production PNG v1 carrier and remains wired for embed/extract/capacity/info in `src/StegoForge.Formats/Png/PngLsbFormatHandler.cs`.
+- [x] PNG capacity estimations are validated through integration entry points:
   - `GetCapacityAsync_PngCarrier_ReturnsExpectedFormatAndCanEmbedDecisions` in `tests/StegoForge.Tests.Integration/CapacityServiceIntegrationTests.cs`
   - deterministic calculator boundaries in `tests/StegoForge.Tests.Unit/Png/PngLsbCapacityCalculatorTests.cs`
-- [ ] PNG round-trip coverage passes for representative processing modes in `tests/StegoForge.Tests.Integration/PngRoundTripIntegrationTests.cs`:
+- [x] PNG round-trip coverage passes for representative processing modes in `tests/StegoForge.Tests.Integration/PngRoundTripIntegrationTests.cs`:
   - `EmbedExtract_BasicRoundTrip_ProducesByteIdenticalPayload`
   - `EmbedExtract_EncryptedRoundTrip_ProducesByteIdenticalPayload`
   - `EmbedExtract_CompressedRoundTrip_ProducesByteIdenticalPayload`
   - `EmbedExtract_CompressedAndEncryptedRoundTrip_ProducesByteIdenticalPayload`
-- [ ] PNG output validity checks remain enforced in `tests/StegoForge.Tests.Integration/PngRoundTripIntegrationTests.cs` via IHDR parsing + `Image.Identify` + `Image.LoadAsync` path (`ValidateEmbeddedPngAsync`).
-- [ ] Unsupported PNG modes are rejected deterministically by tests:
+- [x] PNG output validity checks remain enforced in `tests/StegoForge.Tests.Integration/PngRoundTripIntegrationTests.cs` via IHDR parsing + `Image.Identify` + `Image.LoadAsync` path (`ValidateEmbeddedPngAsync`).
+- [x] Unsupported PNG modes are rejected deterministically by tests:
   - `Supports_ReturnsFalse_ForUnsupportedGrayscaleColorType`
   - `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedColorType`
 
@@ -87,18 +88,18 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Implementation checklist (tracked):**
 
-- [ ] `BmpLsbFormatHandler` remains the production BMP v1 carrier and is wired for embed/extract/capacity/info flows in `src/StegoForge.Formats/Bmp/BmpLsbFormatHandler.cs`.
-- [ ] BMP capacity boundaries are covered by deterministic tests:
+- [x] `BmpLsbFormatHandler` remains the production BMP v1 carrier and is wired for embed/extract/capacity/info flows in `src/StegoForge.Formats/Bmp/BmpLsbFormatHandler.cs`.
+- [x] BMP capacity boundaries are covered by deterministic tests:
   - `Calculate_TinyImages_ReportZeroAndNearZeroSafeUsableCapacity`
   - `Calculate_ExactFitPayload_ReturnsEmbeddableWithoutDiagnostics`
   - `Calculate_OverCapacityByOneByte_ReturnsDeterministicOverflowDiagnostic`
   - `GetCapacityAsync_BmpCarrier_ResolvesBmpHandler`
   - files: `tests/StegoForge.Tests.Unit/Bmp/BmpLsbCapacityCalculatorTests.cs`, `tests/StegoForge.Tests.Integration/BmpCapacityServiceIntegrationTests.cs`.
-- [ ] BMP round-trip integration coverage passes in `tests/StegoForge.Tests.Integration/BmpRoundTripIntegrationTests.cs`:
+- [x] BMP round-trip integration coverage passes in `tests/StegoForge.Tests.Integration/BmpRoundTripIntegrationTests.cs`:
   - `EmbedExtract_SmallBmpFixture_ProducesByteIdenticalRoundTrip`
   - `EmbedExtract_MediumBmpFixture_ProducesByteIdenticalRoundTrip`
   - `Extract_CorruptedCarrier_MapsToDeterministicCorruptedDataErrorCode`
-- [ ] Unsupported BMP variants are rejected with deterministic errors in `tests/StegoForge.Tests.Unit/Bmp/BmpLsbFormatHandlerTests.cs`:
+- [x] Unsupported BMP variants are rejected with deterministic errors in `tests/StegoForge.Tests.Unit/Bmp/BmpLsbFormatHandlerTests.cs`:
   - `Supports_ReturnsFalse_ForUnsupportedBitDepth`
   - `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedBitDepth`
   - `EmbedAsync_ThrowsUnsupportedFormat_ForUnsupportedCompressionMode`
@@ -110,19 +111,19 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Implementation checklist (tracked):**
 
-- [ ] `WavLsbFormatHandler` remains the production WAV v1 carrier and is wired for embed/extract/capacity/info flows in `src/StegoForge.Formats/Wav/WavLsbFormatHandler.cs`.
-- [ ] WAV capacity boundaries are covered by deterministic tests:
+- [x] `WavLsbFormatHandler` remains the production WAV v1 carrier and is wired for embed/extract/capacity/info flows in `src/StegoForge.Formats/Wav/WavLsbFormatHandler.cs`.
+- [x] WAV capacity boundaries are covered by deterministic tests:
   - `CalculateFromSampleCount_TinyCarrier_ReturnsZeroSafeCapacityWithDeterministicDiagnostics`
   - `CalculateFromSampleCount_ExactFitPayload_CanEmbedWithoutDiagnostics`
   - `CalculateFromSampleCount_OverflowByOneByte_ReturnsDeterministicDiagnostics`
   - `GetCapacityAsync_WavCarrier_ReturnsExpectedDeterministicCapacityAndOverCapacityDiagnostics`
   - files: `tests/StegoForge.Tests.Unit/Wav/WavLsbCapacityCalculatorTests.cs`, `tests/StegoForge.Tests.Integration/WavCapacityServiceIntegrationTests.cs`.
-- [ ] WAV round-trip integration coverage passes in `tests/StegoForge.Tests.Integration/WavRoundTripIntegrationTests.cs`:
+- [x] WAV round-trip integration coverage passes in `tests/StegoForge.Tests.Integration/WavRoundTripIntegrationTests.cs`:
   - `EmbedExtract_BaselineRoundTrip_ProducesByteIdenticalPayload`
   - `EmbedExtract_CompressedRoundTrip_ProducesByteIdenticalPayload`
   - `EmbedExtract_EncryptedRoundTrip_ProducesByteIdenticalPayload`
   - `EmbedExtract_EncryptedAndCompressedRoundTrip_ProducesByteIdenticalPayload`
-- [ ] Unsupported-format and malformed-carrier WAV variants are rejected with deterministic errors:
+- [x] Unsupported-format and malformed-carrier WAV variants are rejected with deterministic errors:
   - `EmbedAsync_WithNonPcmFormatTag_ThrowsUnsupportedFormat`
   - `ExtractAsync_WithUnsupportedBitDepth_ThrowsUnsupportedFormat`
   - `GetCapacityAsync_WithTruncatedHeader_ThrowsInvalidHeader`
@@ -171,7 +172,7 @@ This roadmap maps milestones 1–14 with acceptance criteria.
   - `HelpCommand_IsDiscoverable`
   - `Version_Command_IsDiscoverable`
   - file: `tests/StegoForge.Tests.Cli/CliCommandIntegrationTests.cs`.
-- [x] Command pipeline exit-code determinism is locked by tests exercising success and mapped failures in `src/StegoForge.Cli/CommandExecution.cs` and `src/StegoForge.Cli/CliErrorContract.cs`:
+- [x] Command pipeline exit-code determinism is locked by tests exercising success and mapped failures in `src/StegoForge.Cli/Commands/CommandExecution.cs` and `src/StegoForge.Cli/CliErrorContract.cs`:
   - `EmbedCommand_ReturnsMappedFailureCodeAndStableStderrFormat`
   - `ExtractCommand_ReturnsMappedFailureCode`
   - `CapacityCommand_ReturnsMappedFailureCode`
@@ -181,7 +182,7 @@ This roadmap maps milestones 1–14 with acceptance criteria.
     - `ParserError_InvalidEnumValue_ReturnsInvalidArgumentsCodeAndStableMessageShape`
     - `ParserError_InvalidFileArgument_ReturnsInvalidArgumentsCodeAndStableMessageShape`
   - file: `tests/StegoForge.Tests.Cli/CommandPipelineExitCodeTests.cs`.
-- [x] JSON output contract behavior is stable for both success and failure paths via `src/StegoForge.Cli/Output/` and error serialization in `src/StegoForge.Cli/CommandExecution.cs`:
+- [x] JSON output contract behavior is stable for both success and failure paths via `src/StegoForge.Cli/Output/` and error serialization in `src/StegoForge.Cli/Commands/CommandExecution.cs`:
   - `InfoCommand_JsonSuccess_EmitsStableContractFields`
   - `CapacityCommand_JsonFailure_EmitsStableErrorShapeAndExitCode`
   - `ParserError_WithJsonFlag_EmitsJsonErrorShape`
@@ -229,18 +230,36 @@ This roadmap maps milestones 1–14 with acceptance criteria.
 
 **Goal:** Complete primary docs for contributors and operators.
 
-**Acceptance criteria:**
+**Implementation checklist (tracked):**
 
-- README and docs set cover architecture, payload format, build, testing, CLI, GUI.
-- Build and test commands validated in CI docs.
-- Contribution guidance aligns with project conventions.
+- [x] README and primary docs coverage is present and cross-linked for architecture/build/testing/CLI/GUI and payload framing in `README.md`, `docs/architecture.md`, `docs/building.md`, `docs/testing.md`, `docs/cli.md`, `docs/gui.md`, and `docs/payload-format.md`.
+- [x] Docs consistency pass is complete for the current source baseline (`_Last verified against source: 2026-03-07 (0fd7c07)_`) across `README.md` and the docs set (`docs/architecture.md`, `docs/building.md`, `docs/testing.md`, `docs/cli.md`, `docs/gui.md`, `docs/payload-format.md`, `docs/roadmap.md`).
+- [x] CI-command mapping is explicitly documented and aligned with workflow job/step names from `.github/workflows/ci.yml` and `.github/workflows/release.yml` in:
+  - `README.md` (`CI/release command mapping`),
+  - `docs/building.md` (`CI command mapping`),
+  - `docs/testing.md` (`CI mapping for documented test commands`).
+  - Validation source of truth: CI jobs `core-cli` and `wpf`, plus release jobs `package-cli` and `package-wpf`.
+- [x] Contributor guidance is documented and maintained in `CONTRIBUTING.md`, including required docs, test expectations, and PR checklist conventions.
 
 ## Milestone 14 — Release readiness (v1.0)
 
 **Goal:** Prepare stable release candidate and publish artifacts.
 
-**Acceptance criteria:**
+**Acceptance criteria (release-candidate gate checklist):**
 
-- Versioning/changelog/release notes process is documented and executed.
-- All critical tests pass in CI across required platforms.
-- Signed binaries/packages and verification instructions are published.
+- [x] Release-readiness documentation is finalized for Milestone 14:
+  - [x] `README.md`, `docs/building.md`, and `docs/testing.md` describe the current release gate criteria and verification workflow names/step names.
+  - [x] `.github/release-template.md` and `.github/workflows/release.yml` references in docs align with existing release workflow behavior.
+  - [x] Milestone 14 documentation verification timestamp recorded as `2026-03-07T00:00:00Z`.
+- [ ] Version/changelog artifacts are prepared for the target version:
+  - [ ] `CHANGELOG.md` contains a heading for the exact release version and includes migration notes (or `None`).
+  - [ ] `.github/release-template.md` sections are filled for the release notes draft.
+  - [ ] `.github/workflows/release.yml` dispatch inputs are set with matching `tag` (`vX.Y.Z`), `version` (`X.Y.Z`), and non-empty `changelog_summary`.
+- [ ] CI critical matrix pass criteria are satisfied in `.github/workflows/ci.yml` for the commit being tagged:
+  - [ ] `core-cli` job passes on both matrix lanes: `ubuntu-latest` and `windows-latest`.
+  - [ ] `wpf` job passes on `windows-latest`.
+  - [ ] Hardening steps pass with no failures for the required trigger (`Hardening suite (bounded; PR/push)` and `Test WPF hardening subset (Windows)`).
+- [ ] Release packaging, signing, and publication steps pass in `.github/workflows/release.yml`:
+  - [ ] `package-cli` uploads `stegoforge-cli-<tag>-linux-x64.tar.gz`, `.sha256`, `.tar.gz.sig`, and `.sha256.sig`.
+  - [ ] `package-wpf` uploads `stegoforge-wpf-<tag>-windows-x64.zip`, `.sha256`, `.zip.sig`, and `.sha256.sig`.
+  - [ ] `publish-release` publishes release assets including `stegoforge-cosign.pub` and verification instructions remain current in `docs/building.md`.

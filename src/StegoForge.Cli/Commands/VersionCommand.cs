@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Reflection;
+using StegoForge.Application.Diagnostics;
 using StegoForge.Cli.Output;
 
 namespace StegoForge.Cli.Commands;
@@ -16,6 +17,7 @@ public sealed class VersionCommand
         command.SetAction(async parseResult =>
         {
             var json = parseResult.GetValueForOption(jsonOption);
+            var diagnostics = DiagnosticContext.Create("version", "unknown");
             return await CommandExecution.ExecuteAsync(_ =>
             {
                 var assembly = Assembly.GetExecutingAssembly().GetName();
@@ -25,7 +27,7 @@ public sealed class VersionCommand
                     Version: assembly.Version?.ToString() ?? "unknown");
 
                 return Task.FromResult<ICommandOutput>(payload);
-            }, json).ConfigureAwait(false);
+            }, json, diagnostics).ConfigureAwait(false);
         });
 
         return command;

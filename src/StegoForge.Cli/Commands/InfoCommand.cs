@@ -1,4 +1,5 @@
 using System.CommandLine;
+using StegoForge.Application.Diagnostics;
 using StegoForge.Cli.Output;
 using StegoForge.Core.Abstractions;
 using StegoForge.Core.Models;
@@ -34,6 +35,8 @@ public sealed class InfoCommand(IInfoService infoService)
             var quiet = parseResult.GetValueForOption(quietOption);
             var verbose = parseResult.GetValueForOption(verboseOption);
 
+            var diagnostics = DiagnosticContext.Create("info", CommandExecution.DeriveCarrierFormatHint(carrierPath));
+
             return await CommandExecution.ExecuteAsync(async cancellationToken =>
             {
                 var request = new InfoRequest(
@@ -54,7 +57,7 @@ public sealed class InfoCommand(IInfoService infoService)
                     PayloadMetadata: response.PayloadMetadata,
                     ProtectionDescriptors: response.ProtectionDescriptors,
                     Diagnostics: response.Diagnostics);
-            }, json).ConfigureAwait(false);
+            }, json, diagnostics).ConfigureAwait(false);
         });
 
         return command;

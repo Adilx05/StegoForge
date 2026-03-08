@@ -52,7 +52,9 @@ public sealed class ViewModelOperationStateTests
         await WaitUntilAsync(static model => !model.IsBusy && model.LastErrorCode is not null, vm);
 
         Assert.Equal(StegoErrorCode.FileNotFound.ToString(), vm.LastErrorCode);
-        Assert.Contains(fixture.CarrierPath, vm.LastErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("Error code: FileNotFound", vm.LastErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("Operation: extract", vm.LastErrorMessage, StringComparison.Ordinal);
+        Assert.Contains("Carrier format:", vm.LastErrorMessage, StringComparison.Ordinal);
         Assert.Contains("FileNotFound", vm.ResultMessage, StringComparison.Ordinal);
         Assert.Equal("Failed", vm.ProgressText);
     }

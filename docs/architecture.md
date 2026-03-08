@@ -1,5 +1,6 @@
 # Architecture
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 ## Goals
 
 StegoForge aims to keep steganography logic modular, testable, and provider-driven so that:
@@ -15,15 +16,15 @@ StegoForge aims to keep steganography logic modular, testable, and provider-driv
   - Provider abstractions (`ICarrierFormatHandler`, `ICryptoProvider`, `ICompressionProvider`)
   - Request/result models and standardized errors.
 - `src/StegoForge.Application`
-  - Use-case orchestration and coordination logic (planned).
+  - Use-case orchestration and coordination logic (implemented).
 - `src/StegoForge.Formats`
-  - Carrier format handlers (planned).
+  - Carrier format handlers (implemented for `png-lsb-v1`, `bmp-lsb-v1`, and `wav-lsb-v1`).
 - `src/StegoForge.Crypto`
-  - Encryption, key derivation, and integrity primitives (planned).
+  - Encryption, key derivation, and integrity primitives (implemented with AES-GCM + PBKDF2).
 - `src/StegoForge.Compression`
-  - Compression pipeline providers (planned).
+  - Compression pipeline providers (implemented with Deflate).
 - `src/StegoForge.Infrastructure`
-  - Cross-cutting wiring and hosting concerns (planned).
+  - Cross-cutting wiring and hosting concerns (implemented).
 - `src/StegoForge.Cli`
   - Command-line entry point.
 - `src/StegoForge.Wpf`
@@ -38,7 +39,7 @@ Dependencies should flow inward:
 3. Concrete providers depend on Core abstractions.
 4. Core does not depend on UI/Application/provider assemblies.
 
-## Runtime flow (target)
+## Runtime flow (implemented)
 
 ### Embed
 
@@ -265,3 +266,50 @@ Payload envelope serialization/deserialization must throw StegoForge typed excep
 - Unexpected internal failures should be translated to `InternalProcessingException` at orchestration boundaries when needed, preserving user-safe messages.
 
 This contract ensures deterministic error-code behavior across CLI and GUI surfaces without requiring transport-specific parsing logic in presentation layers.
+
+## Processing hardening limits
+
+`ProcessingLimits` (`src/StegoForge.Core/Models/OperationOptions.cs`) defines central guardrails used across orchestration, envelope serialization, and carrier handlers:
+
+- `MaxPayloadBytes` (default `16 MiB`)
+- `MaxHeaderBytes` (default `64 KiB`)
+- `MaxEnvelopeBytes` (default `20 MiB`)
+- `MaxCarrierSizeBytes` (default `128 MiB`, nullable to disable)
+
+### Enforcement points
+
+- `PayloadEnvelopeSerializer` rejects oversized envelope/header/payload length fields before allocating buffers for declared lengths.
+- `PayloadOrchestrationService` rejects oversized payloads before compression, decompression, or encryption work.
+- PNG/BMP/WAV format handlers reject oversized envelope payloads before embed/extract traversal and apply optional carrier-size guard checks before async stream copy.
+
+### Tuning guidance
+
+- Keep `MaxEnvelopeBytes` greater than or equal to `MaxPayloadBytes`.
+- Raise `MaxHeaderBytes` only when metadata descriptors are intentionally expanded.
+- Keep `MaxCarrierSizeBytes` enabled in interactive/CLI deployments to avoid accidental large-file processing; set it to `null` only in controlled batch environments.
+- Prefer incremental tuning with load tests so limits stay below infrastructure memory-pressure thresholds.
+
+## Security Logging Policy
+
+StegoForge centralizes error/log sanitization in `StegoForge.Application.Diagnostics` so every surface emits actionable diagnostics without leaking secrets.
+
+**Safe diagnostic fields**:
+
+- `operationType`
+- `carrierFormat`
+- `errorCode`
+- `correlationId`
+- `timestampUtc`
+
+**Redacted diagnostic fields**:
+
+- `password` / `passphrase`
+- plaintext payload bytes (`plaintextPayloadBytes`, `payloadBytes`)
+- derived key material (`derivedKey`, `kdfOutput`, `encryptionKey`)
+
+Policy behavior:
+
+1. Errors are mapped to `StegoErrorCode` and sanitized through `SecurityLoggingPolicy.SanitizeMessage(...)`.
+2. CLI/WPF emit a correlation ID for support/debug handoff.
+3. User-visible failures include operation and carrier-format context while replacing sensitive values with `<redacted>`.
+4. Raw secrets must never be emitted in logs, CLI stderr, or UI notification content.

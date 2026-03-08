@@ -1,5 +1,6 @@
 # Testing Strategy
 
+_Last verified against source: 2026-03-07 (`0fd7c07`)._
 ## Test project map
 
 - `tests/StegoForge.Tests.Unit`
@@ -11,7 +12,7 @@
 - `tests/StegoForge.Tests.Wpf`
   - WPF-level smoke tests where environment permits.
 
-## Quality gates (target)
+## Quality gates (current)
 
 - All test projects pass on CI.
 - Build warnings are reviewed and kept low/noise-free.
@@ -20,16 +21,119 @@
 
 ## Recommended local commands
 
-```bash
-# Full test pass
- dotnet test StegoForge.sln
+### CLI-only / Core tests (cross-platform)
 
-# Focused runs
- dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj
- dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj
- dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj
- dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj
+```bash
+dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release
 ```
+
+### WPF-only tests (Windows-specific)
+
+```powershell
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "FullyQualifiedName~WpfCommandFlowTests"
+```
+
+### Full-solution tests (Windows-specific)
+
+> `StegoForge.sln` includes WPF projects and should be tested on Windows.
+
+```powershell
+dotnet test StegoForge.sln --configuration Release
+```
+
+## Critical test matrix (release readiness)
+
+The following suites are **release-critical**. A release candidate is only considered ready when each suite has run under its required trigger and passed.
+
+| Required suite | Trigger | CI workflow/job mapping | Required CI evidence |
+| --- | --- | --- | --- |
+| Unit tests (`StegoForge.Tests.Unit`) | Every PR/push and release cut | `.github/workflows/ci.yml` → `core-cli` (matrix: `ubuntu-latest`, `windows-latest`) → `Test core/CLI projects` | Both matrix lanes green with unit suite included in run log/artifacts |
+| Integration tests (`StegoForge.Tests.Integration`) | Every PR/push and release cut | `.github/workflows/ci.yml` → `core-cli` (matrix: `ubuntu-latest`, `windows-latest`) → `Test core/CLI projects` | Both matrix lanes green with integration suite included in run log/artifacts |
+| CLI tests (`StegoForge.Tests.Cli`) | Every PR/push and release cut | `.github/workflows/ci.yml` → `core-cli` (matrix: `ubuntu-latest`, `windows-latest`) → `Test core/CLI projects` | Both matrix lanes green with CLI suite included in run log/artifacts |
+| WPF tests (`StegoForge.Tests.Wpf`) | Every PR/push and release cut | `.github/workflows/ci.yml` → `wpf` → `Test WPF smoke project` and `Test WPF command-flow subset` | `wpf` job green on `windows-latest` |
+| Hardening suite (bounded) | PR/push/release validation (`github.event_name != 'schedule'`) | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (bounded; PR/push)` and `.github/workflows/ci.yml` → `wpf` → `Test WPF hardening subset (Windows)` | No failures in bounded hardening steps; artifacts/repros reviewed when produced |
+| Hardening suite (full fuzz campaigns) | Scheduled/nightly (`github.event_name == 'schedule'`) | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (full fuzz campaigns; nightly/scheduled)` | Latest scheduled run green for full hardening campaigns |
+
+### Release cut failure conditions
+
+Do **not** cut/publish a release when any of the following conditions hold:
+
+- Any critical suite above is skipped for the trigger where it is required.
+- `Hardening suite (bounded; PR/push)` (or the WPF hardening subset step) has any failure.
+- The Windows WPF lane (`wpf` job) is not green.
+- Required CI status checks are not successful for the commit being released.
+
+### Release Candidate (RC) checklist (before tagging)
+
+Run the following workflow and command evidence checklist on the exact commit that will receive the tag:
+
+- [ ] Confirm `CHANGELOG.md` has the target version section and migration notes.
+  - Evidence: diff/review of `CHANGELOG.md` for `## X.Y.Z` section.
+- [ ] Confirm the CI workflow `.github/workflows/ci.yml` is green for required jobs.
+  - Evidence: successful run for `core-cli` (both `ubuntu-latest` and `windows-latest`) and `wpf` (`windows-latest`).
+
+Execute (or verify equivalent CI execution records for) the following commands:
+
+```bash
+dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --filter "Category=Hardening&Campaign!=Fuzz-Full"
+dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --filter "Category=Hardening&Campaign!=Fuzz-Full"
+```
+
+```powershell
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "FullyQualifiedName~WpfCommandFlowTests"
+dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "Category=Hardening"
+```
+
+- [ ] Capture workflow evidence required before creating a release tag:
+  - [ ] `.github/workflows/ci.yml` run URL attached to release notes draft.
+  - [ ] Uploaded CI artifacts present: `test-results-core-cli-ubuntu-latest`, `test-results-core-cli-windows-latest`, `test-results-wpf-windows-latest`.
+  - [ ] No failed steps in `Hardening suite (bounded; PR/push)` and `Test WPF hardening subset (Windows)`.
+- [ ] Confirm release workflow readiness in `.github/workflows/release.yml` inputs:
+  - [ ] `tag` format `vX.Y.Z`.
+  - [ ] `version` format `X.Y.Z` where `tag == v{version}`.
+  - [ ] `changelog_summary` is non-empty and matches `CHANGELOG.md` highlights.
+
+Only create the Git tag after all checklist items above are complete.
+
+### CI mapping for documented test commands
+
+| Documented command | CI workflow job/step |
+| --- | --- |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release` + integration + CLI equivalents | `.github/workflows/ci.yml` → `core-cli` → `Test core/CLI projects` |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --filter "Category=Hardening&Campaign!=Fuzz-Full"` + integration equivalent | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (bounded; PR/push)` |
+| `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --filter "Category=Hardening&Campaign=Fuzz-Full"` + integration equivalent | `.github/workflows/ci.yml` → `core-cli` → `Hardening suite (full fuzz campaigns; nightly/scheduled)` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release` | `.github/workflows/ci.yml` → `wpf` → `Test WPF smoke project` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "FullyQualifiedName~WpfCommandFlowTests"` | `.github/workflows/ci.yml` → `wpf` → `Test WPF command-flow subset` |
+| `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --filter "Category=Hardening"` | `.github/workflows/ci.yml` → `wpf` → `Test WPF hardening subset (Windows)` |
+
+Environment caveats:
+
+- WPF tests require Windows CI runners or local Windows machines.
+- Full hardening fuzz campaigns are scheduled in CI because they are intentionally long-running.
+
+## Docs QA checklist (pre-release)
+
+Before a release cut (or milestone-docs sign-off), maintainers should run this docs-focused checklist to keep documentation accurate and CI-aligned:
+
+- Verify scope docs are present and current: `README.md`, `CONTRIBUTING.md`, `docs/architecture.md`, `docs/payload-format.md`, `docs/building.md`, `docs/testing.md`, `docs/cli.md`, `docs/gui.md`, and `docs/roadmap.md`.
+- Confirm every command block still maps to current workflow names/steps in `.github/workflows/ci.yml` and `.github/workflows/release.yml`.
+- Re-run core documentation-linked test suites locally (or validate equivalent CI runs):
+  - `dotnet test tests/StegoForge.Tests.Unit/StegoForge.Tests.Unit.csproj --configuration Release --no-build`
+  - `dotnet test tests/StegoForge.Tests.Integration/StegoForge.Tests.Integration.csproj --configuration Release --no-build`
+  - `dotnet test tests/StegoForge.Tests.Cli/StegoForge.Tests.Cli.csproj --configuration Release --no-build`
+  - On Windows: `dotnet test tests/StegoForge.Tests.Wpf/StegoForge.Tests.Wpf.csproj --configuration Release --no-build`
+- Verify CI checks are green for documentation-linked jobs before release:
+  - `.github/workflows/ci.yml`: `core-cli`, `wpf`
+  - `.github/workflows/release.yml`: `package-cli`, `package-wpf` (for tag/release validation)
+- CI-doc alignment check: confirm the exact job/step names referenced in this file still match `.github/workflows/ci.yml` (`core-cli`, `wpf`, `Test core/CLI projects`, `Hardening suite (bounded; PR/push)`, `Hardening suite (full fuzz campaigns; nightly/scheduled)`, `Test WPF smoke project`, `Test WPF command-flow subset`, `Test WPF hardening subset (Windows)`).
+- Ensure milestone status language is factual (checked items completed, pending work left unchecked) in `docs/roadmap.md`.
 
 
 ## WPF smoke test scope
@@ -332,17 +436,50 @@ Files: `tests/StegoForge.Tests.Unit/Application/CarrierFormatResolverTests.cs`, 
    - CLI option parsing and clear diagnostics.
    - GUI validation and user feedback consistency.
 
-## Performance and stress checks (planned)
+## Performance and stress checks (backlog)
 
 - Capacity boundary tests (near-max payloads).
 - Large-file memory profile checks.
 - Multi-file batch throughput benchmarking.
 
-## CI guidance (planned)
+## CI hardening strategy
 
-- Run unit + CLI/integration tests on all supported platforms.
-- Run WPF tests on Windows runners.
-- Publish test results and coverage artifacts.
+CI now separates baseline correctness runs from hardening-focused runs so pull requests stay deterministic while nightly schedules can run deeper campaigns.
+
+### Baseline jobs (all PRs/pushes)
+
+- `core-cli` matrix (`ubuntu-latest`, `windows-latest`) runs full unit, integration, and CLI suites.
+- `wpf` (`windows-latest`) runs WPF smoke + command-flow tests.
+
+### Hardening jobs in CI
+
+- **Bounded hardening segment (PR/push):**
+  - Unit + integration tests filtered with `Category=Hardening&Campaign!=Fuzz-Full`.
+  - This includes deterministic serializer/handler fuzz subsets and hardening regression coverage.
+- **WPF hardening subset (Windows):**
+  - WPF tests filtered with `Category=Hardening` to validate GUI-layer sanitization/robustness on the Windows runner.
+- **Full fuzz segment (scheduled/nightly):**
+  - Unit + integration tests filtered with `Category=Hardening&Campaign=Fuzz-Full`.
+  - Intended for longer-running deterministic fuzz campaigns that are too expensive for PR latency.
+
+### Trait conventions for hardening campaigns
+
+Use xUnit traits on hardening tests so CI routing remains explicit:
+
+- `Category=Hardening` — marks tests that are part of the hardening strategy.
+- `Campaign=Fuzz-Bounded` — deterministic, short-running fuzz subset suitable for PRs.
+- `Campaign=Fuzz-Full` + `Execution=Nightly` — long-running campaign reserved for scheduled workflows.
+
+### Hardening artifact capture
+
+CI sets `STEGOFORGE_HARDENING_ARTIFACTS_DIR` for hardening test segments.
+When an unexpected exception is encountered during fuzz loops, tests persist minimal repro artifacts to that folder (raw failing bytes + seed/exception metadata).
+The workflow uploads:
+
+- `TestResults/*.trx`
+- `TestResults/hardening-repros/*`
+
+This provides immediate corpus/repro seed evidence for post-failure debugging without rerunning entire campaigns locally.
 
 ## Milestone 2 Contract Stability Tests
 
@@ -364,3 +501,40 @@ Required resolver coverage includes:
 - single matching handler resolution,
 - multiple matching handlers with deterministic precedence selection,
 - no matching handlers producing `UnsupportedFormatException`.
+
+## Hardening and cancellation test guidance
+
+The hardening baseline now includes configurable processing-limit and cancellation-path coverage.
+
+### Default limits under test
+
+The default `ProcessingLimits` contract is:
+
+- `MaxPayloadBytes = 16 MiB`
+- `MaxHeaderBytes = 64 KiB`
+- `MaxEnvelopeBytes = 20 MiB`
+- `MaxCarrierSizeBytes = 128 MiB` (nullable)
+
+When adding tests that exceed these values, construct handlers/services/serializers with explicit low limits so tests remain deterministic and lightweight.
+
+### Required hardening scenarios
+
+- Oversized payload rejection happens before compression/encryption/decompression provider calls.
+- Oversized or malformed envelope length fields are rejected before any large allocations.
+- Format handlers reject over-limit envelope payloads before doing deep embed/extract work.
+- Pre-canceled `CancellationToken` inputs consistently throw `OperationCanceledException` in async format operations.
+
+### Tuning strategy for CI and fuzzing
+
+- Keep CI limits conservative (low memory overhead) and add dedicated stress jobs for larger thresholds.
+- For fuzzing, keep `MaxEnvelopeBytes` low enough to prevent accidental large allocation attempts from mutated length prefixes.
+- Validate error determinism by asserting both typed exceptions and mapped `StegoErrorCode` values when applicable.
+
+
+## Milestone 14 documentation verification
+
+Release-readiness documentation is verified for the current source state:
+
+- Verified timestamp: **2026-03-07T00:00:00Z**
+- Scope: `README.md`, `docs/architecture.md`, `docs/building.md`, `docs/testing.md`, `docs/cli.md`, `docs/gui.md`, `docs/payload-format.md`, `docs/roadmap.md`
+- Confirmation: command snippets, CI/release workflow mapping, and supported-format statements align with current PNG/BMP/WAV implementation scope.
