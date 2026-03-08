@@ -215,6 +215,28 @@ ol {
   padding: var(--space-5);
 }
 
+.command-list,
+.roadmap-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.command-item pre {
+  margin-bottom: var(--space-3);
+}
+
+.command-item p,
+.roadmap-list p {
+  margin: 0;
+}
+
+.roadmap-list h3 {
+  margin: 0 0 var(--space-2);
+}
+
 pre {
   margin: 0;
   padding: var(--space-5);

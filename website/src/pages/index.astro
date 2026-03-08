@@ -4,34 +4,8 @@ import FeatureGrid from '../components/FeatureGrid.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import Section from '../components/Section.astro';
 import Footer from '../components/Footer.astro';
+import { siteContent } from '../content/site';
 import '../styles/global.css';
-
-const features = [
-  {
-    title: 'Layered architecture',
-    description: 'Core contracts, application orchestration, and provider modules keep UI concerns separate from carrier logic.'
-  },
-  {
-    title: 'Deterministic CLI contracts',
-    description: 'Stable exit codes and JSON error shapes are designed for scripting and CI automation.'
-  },
-  {
-    title: 'Policy-aware workflows',
-    description: 'Embed and extract requests enforce compression/encryption policy validation before handler I/O.'
-  },
-  {
-    title: 'Test-first reliability',
-    description: 'Unit, integration, CLI, and WPF suites validate round trips and failure semantics.'
-  }
-];
-
-const cliExamples = `dotnet run --project src/StegoForge.Cli -- embed --carrier in.png --payload secret.bin --out out.png
-
-dotnet run --project src/StegoForge.Cli -- extract --carrier out.png --out recovered.bin
-
-dotnet run --project src/StegoForge.Cli -- capacity --carrier in.wav --payload 65536 --compress auto
-
-dotnet run --project src/StegoForge.Cli -- info --carrier out.png --json`;
 ---
 
 <html lang="en">
@@ -58,9 +32,9 @@ dotnet run --project src/StegoForge.Cli -- info --carrier out.png --json`;
     </header>
 
     <main>
-      <Hero />
+      <Hero {...siteContent.hero} />
 
-      <Section id="overview" title="Project overview" lead="StegoForge is a modular .NET steganography platform focused on reliable embed/extract workflows across image and audio carriers.">
+      <Section id="overview" title="Project overview" lead={siteContent.overviewLead}>
         <ul>
           <li>Core contracts in <code>StegoForge.Core</code> define service and payload models.</li>
           <li><code>StegoForge.Application</code> coordinates embed, extract, capacity, and info orchestration.</li>
@@ -68,8 +42,8 @@ dotnet run --project src/StegoForge.Cli -- info --carrier out.png --json`;
         </ul>
       </Section>
 
-      <Section id="features" title="Feature highlights" lead="Current implementation emphasizes deterministic behavior and clear boundaries.">
-        <FeatureGrid items={features} />
+      <Section id="features" title="Feature highlights" lead={siteContent.featuresLead}>
+        <FeatureGrid items={siteContent.features} />
       </Section>
 
       <Section id="formats" title="Supported formats" lead="Production handlers currently wired through full workflows.">
@@ -80,35 +54,61 @@ dotnet run --project src/StegoForge.Cli -- info --carrier out.png --json`;
         </ul>
       </Section>
 
-      <Section id="cli" title="CLI examples" lead="Canonical source-first command usage from the repository root.">
-        <CodeBlock code={cliExamples} />
+      <Section id="cli" title="CLI examples" lead={siteContent.cliLead}>
+        <ul class="command-list">
+          {siteContent.cliExamples.map((example) => (
+            <li class="card command-item">
+              <CodeBlock code={example.command} />
+              <p>{example.description}</p>
+            </li>
+          ))}
+        </ul>
       </Section>
 
-      <Section id="wpf" title="WPF desktop app" lead="StegoForge.Wpf provides a Windows workflow for embed/extract tasks with validation and operation-state feedback.">
+      <Section id="wpf" title="WPF desktop app" lead={siteContent.wpf.lead}>
+        <p>Use the WPF app when you want a guided desktop workflow instead of CLI flags.</p>
+        <ul>
+          {siteContent.wpf.useCases.map((useCase) => (
+            <li>{useCase}</li>
+          ))}
+        </ul>
+        <p>Launch on Windows with:</p>
+        <CodeBlock code={siteContent.wpf.launchCommand} />
+        <p>Build on Windows with:</p>
+        <CodeBlock code={siteContent.wpf.buildCommand} />
         <p>
-          The desktop app is intended for interactive use, while the CLI remains the primary automation surface.
-          WPF build and test steps require Windows.
+          Full GUI documentation:
+          <a href={siteContent.wpf.docsHref}>{siteContent.wpf.docsHref}</a>
         </p>
       </Section>
 
-      <Section id="getting-started" title="Installation / getting started" lead="Pinned .NET SDK: 10.0.100.">
-        <ol>
-          <li>Clone the repository and restore CLI/core projects.</li>
-          <li>Build and run tests for unit, integration, and CLI suites.</li>
-          <li>Run <code>dotnet run --project src/StegoForge.Cli -- help</code> to inspect commands.</li>
-        </ol>
-      </Section>
-
-      <Section id="download" title="Download / releases" lead="Release artifacts include CLI tarballs and WPF zip packages with SHA-256 manifests and cosign signatures.">
+      <Section id="getting-started" title="Installation / getting started" lead={siteContent.installation.lead}>
+        <CodeBlock code={siteContent.installation.commands.join('\n')} />
         <p>
-          Use GitHub Releases for versioned binaries and checksum/signature verification material.
-          <a href="https://github.com/StegoForge/StegoForge/releases">Open releases</a>
+          Full build and environment instructions:
+          <a href={siteContent.installation.docsHref}>{siteContent.installation.docsHref}</a>
         </p>
       </Section>
 
-      <Section id="roadmap" title="Roadmap" lead="Near-term milestones focus on hardening, format expansion, and sustained contract stability.">
+      <Section id="download" title="Download / releases" lead={siteContent.ctas.lead}>
+        <div class="actions">
+          <a class="cta primary" href={siteContent.ctas.releases.href}>{siteContent.ctas.releases.label}</a>
+          <a class="cta secondary" href={siteContent.ctas.repository.href}>{siteContent.ctas.repository.label}</a>
+        </div>
+      </Section>
+
+      <Section id="roadmap" title="Roadmap" lead={siteContent.roadmapLead}>
+        <ul class="roadmap-list">
+          {siteContent.roadmap.map((phase) => (
+            <li class="card">
+              <h3>{phase.title}</h3>
+              <p>{phase.summary}</p>
+            </li>
+          ))}
+        </ul>
         <p>
-          See <code>docs/roadmap.md</code> for implementation checklists and milestone-level tracking.
+          Detailed checklist:
+          <a href="docs/roadmap.md">docs/roadmap.md</a>
         </p>
       </Section>
 
