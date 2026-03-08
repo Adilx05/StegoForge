@@ -21,11 +21,11 @@ export const siteContent = {
       'Use the deterministic CLI for automation or the WPF desktop app for guided operations across BMP, PNG, and WAV carriers.',
     primaryCta: {
       label: 'Repository',
-      href: 'https://github.com/StegoForge/StegoForge'
+      href: 'https://github.com/Adilx05/StegoForge'
     },
     secondaryCta: {
       label: 'Releases',
-      href: 'https://github.com/StegoForge/StegoForge/releases'
+      href: 'https://github.com/Adilx05/StegoForge/releases'
     }
   },
   overviewLead:
@@ -86,7 +86,7 @@ export const siteContent = {
   installation: {
     lead: 'Quickstart for CLI and test validation using the pinned .NET SDK (10.0.100).',
     commands: [
-      'git clone https://github.com/StegoForge/StegoForge.git',
+      'git clone https://github.com/Adilx05/StegoForge.git',
       'cd StegoForge',
       'dotnet restore',
       'dotnet build',
@@ -99,11 +99,11 @@ export const siteContent = {
     lead: 'Get binaries from tagged releases or review source, docs, and issues in the repository.',
     releases: {
       label: 'GitHub Releases',
-      href: 'https://github.com/StegoForge/StegoForge/releases'
+      href: 'https://github.com/Adilx05/StegoForge/releases'
     },
     repository: {
       label: 'GitHub Repository',
-      href: 'https://github.com/StegoForge/StegoForge'
+      href: 'https://github.com/Adilx05/StegoForge'
     }
   },
   roadmapLead: 'Roadmap summary synced with docs/roadmap.md milestones 1-14.',
