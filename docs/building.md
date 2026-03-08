@@ -312,3 +312,29 @@ Before dispatching a release:
 3. Provide a non-empty `changelog_summary` workflow input.
 
 The workflow fails fast if any required release metadata is missing or if `CHANGELOG.md` does not contain the requested version heading.
+
+
+## Versioning during builds
+
+The repository uses MinVer via `Directory.Build.props` for all projects (CLI, WPF, libraries, tests).
+
+- Tag prefix: `v`
+- Default local prerelease identifiers: `alpha.0`
+- Shared metadata mapping:
+  - `Version = $(MinVerVersion)`
+  - `AssemblyVersion = Major.Minor.0.0` (derived from parsed `Version`)
+  - `FileVersion = Major.Minor.Patch.0` (derived from parsed `Version`)
+  - `InformationalVersion = $(Version)`
+
+A shared MSBuild target (`Directory.Build.targets`) prints resolved values during build so version resolution is visible in local and CI logs.
+
+Validation command:
+
+```bash
+dotnet build src/StegoForge.Cli/StegoForge.Cli.csproj --configuration Release
+```
+
+Look for a log line beginning with `StegoForge version metadata:`.
+
+
+Note: numeric `AssemblyVersion` and `FileVersion` are parsed from `$(Version)` rather than directly from `$(MinVerMajor)`/`$(MinVerMinor)`/`$(MinVerPatch)` so WPF WindowsDesktop markup compilation gets valid values consistently.

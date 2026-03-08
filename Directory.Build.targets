@@ -1,0 +1,5 @@
+<Project>
+  <Target Name="ShowResolvedVersion" BeforeTargets="CoreCompile" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Message Importance="high" Text="StegoForge version metadata: Version=$(Version), AssemblyVersion=$(AssemblyVersion), FileVersion=$(FileVersion), InformationalVersion=$(InformationalVersion)" />
+  </Target>
+</Project>

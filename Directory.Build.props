@@ -6,5 +6,31 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <!-- MinVer: derive semantic versions from git tags like v1.2.3 / v1.3.0-beta.1 -->
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
+
+    <!-- Version flow shared by all projects (CLI, WPF, libraries, tests) -->
+    <Version>$(MinVerVersion)</Version>
+
+    <!--
+      Use regex parsing over $(Version) rather than MinVerMajor/Minor/Patch properties,
+      because those component properties are not guaranteed at evaluation time for all SDK targets
+      (notably WindowsDesktop/WPF markup compile).
+    -->
+    <StegoForgeVersionCore>$([System.Text.RegularExpressions.Regex]::Match('$(Version)', '^\d+\.\d+\.\d+').Value)</StegoForgeVersionCore>
+    <StegoForgeVersionCore Condition="'$(StegoForgeVersionCore)' == ''">0.0.0</StegoForgeVersionCore>
+
+    <AssemblyVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(StegoForgeVersionCore)', '^(\d+)\.(\d+)\.(\d+)$', '$1.$2.0.0'))</AssemblyVersion>
+    <FileVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(StegoForgeVersionCore)', '^(\d+)\.(\d+)\.(\d+)$', '$1.$2.$3.0'))</FileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
+
+    <!-- Deterministic metadata in CI -->
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" Version="6.0.0" PrivateAssets="all" />
+  </ItemGroup>
 </Project>
